@@ -1,7 +1,7 @@
+import { WEBSOCKET_URL } from '@/lib/constants';
+import { TripEvents, BackendEndpoints, ServerWsMessage, isValidWsMessage, isValidTripEvent, ClientWsMessage } from '@/lib/contracts';
+import { Coordinate, CarPackageSlug, Trip, Driver } from '@/lib/types';
 import { useEffect, useState } from 'react';
-import { WEBSOCKET_URL } from '../lib/constants';
-import { CarPackageSlug, Trip, Driver, Coordinate } from '../lib/types';
-import { TripEvents, BackendEndpoints, ServerWsMessage, isValidWsMessage, isValidTripEvent, ClientWsMessage } from '../lib/contracts';
 
 interface useDriverConnectionProps {
   location: Coordinate;
