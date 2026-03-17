@@ -17,16 +17,16 @@ const DriverMap = dynamic(
 );
 const RiderMap = dynamic(() => import("@/components/RiderMap"), { ssr: false });
 
-// Initialize Leaflet icons
+// Initialize Leaflet with custom icon
 if (typeof window !== "undefined") {
   import("leaflet").then((L) => {
-    const DefaultIcon = L.default.icon({
+    const MarkerIcon = L.default.icon({
       iconUrl: icon.src,
       shadowUrl: iconShadow.src,
       iconSize: [25, 41],
       iconAnchor: [12, 41],
     });
-    L.default.Marker.prototype.options.icon = DefaultIcon;
+    L.default.Marker.prototype.options.icon = MarkerIcon;
   });
 }
 
@@ -80,7 +80,7 @@ export function HomeContent() {
         <div className="flex flex-col items-center justify-center h-screen gap-6 px-4">
           <div className="bg-white p-8 rounded-2xl shadow-lg text-center max-w-md w-full">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">
-              Welcome to RideShare
+              Welcome to Wayfare
             </h2>
             <p className="text-gray-600 mb-8">
               Choose how you&apos;d like to use our service today
