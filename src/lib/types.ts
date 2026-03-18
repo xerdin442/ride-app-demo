@@ -5,7 +5,6 @@ export interface Trip {
     selectedFare: RouteFare;
     route: Route;
     driver?: Driver;
-    trip: Trip;
 }
 
 export interface RequestRideProps {
@@ -42,7 +41,6 @@ export interface RouteFare {
     route: Route,
 }
 
-
 export interface HTTPTripStartResponse {
     tripID: string;
 }
@@ -54,7 +52,6 @@ export interface TripPreview {
     duration: number,
     distance: number,
 }
-
 
 export interface Driver {
     id: string;
