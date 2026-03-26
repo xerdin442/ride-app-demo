@@ -2,21 +2,17 @@
 
 import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
 import L from "leaflet";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useRef } from "react";
 import * as Geohash from "ngeohash";
 import { DriverCard } from "./DriverCard";
-import { MapClickHandler } from "./MapClickHandler";
 import { TripEvents } from "@/lib/contracts";
-import { Coordinate, CarPackageSlug } from "@/lib/types";
+import { CarPackageSlug } from "@/lib/types";
 import { DriverTripOverview } from "./DriverTripOverview";
 import { useDriverStreamConnection } from "@/hooks/useDriverStreamConnection";
 import { RoutingControl } from "./RoutingControl";
-
-const START_LOCATION: Coordinate = {
-  latitude: 37.7749,
-  longitude: -122.4194,
-};
+import { useLocationTracker } from "@/hooks/useLocationTracker";
+import LoadingMap from "./LoadingMap";
 
 const driverMarker = new L.Icon({
   iconUrl: "https://www.svgrepo.com/show/25407/car.svg",
@@ -40,13 +36,12 @@ const destinationMarker = new L.Icon({
 export const DriverMap = ({ packageSlug }: { packageSlug: CarPackageSlug }) => {
   const mapRef = useRef<L.Map>(null);
   const userID = useMemo(() => crypto.randomUUID(), []);
-  const [riderLocation, setRiderLocation] =
-    useState<Coordinate>(START_LOCATION);
+  const { location: driverLocation, mapPosition } = useLocationTracker();
 
-  const driverGeohash = useMemo(
-    () => Geohash.encode(riderLocation?.latitude, riderLocation?.longitude, 7),
-    [riderLocation?.latitude, riderLocation?.longitude],
-  );
+  const driverGeohash = useMemo(() => {
+    if (!driverLocation) return;
+    return Geohash.encode(driverLocation.latitude, driverLocation.longitude, 7);
+  }, [driverLocation]);
 
   const {
     error,
@@ -57,18 +52,11 @@ export const DriverMap = ({ packageSlug }: { packageSlug: CarPackageSlug }) => {
     setTripStatus,
     resetTripStatus,
   } = useDriverStreamConnection({
-    location: riderLocation,
+    location: driverLocation,
     geohash: driverGeohash,
     userID,
     packageSlug,
   });
-
-  const handleMapClick = (e: L.LeafletMouseEvent) => {
-    setRiderLocation({
-      latitude: e.latlng.lat,
-      longitude: e.latlng.lng,
-    });
-  };
 
   const handleAcceptTrip = () => {
     if (!requestedTrip || !requestedTrip.id || !driver) {
@@ -115,7 +103,6 @@ export const DriverMap = ({ packageSlug }: { packageSlug: CarPackageSlug }) => {
     [requestedTrip],
   );
 
-  // destination is the last coordinate in the route
   const destination = useMemo(
     () =>
       requestedTrip?.route?.geometry[0]?.coordinates[
@@ -123,7 +110,7 @@ export const DriverMap = ({ packageSlug }: { packageSlug: CarPackageSlug }) => {
       ],
     [requestedTrip],
   );
-  // start location is the first coordinate in the route
+
   const startLocation = useMemo(
     () => requestedTrip?.route?.geometry[0]?.coordinates[0],
     [requestedTrip],
@@ -135,53 +122,51 @@ export const DriverMap = ({ packageSlug }: { packageSlug: CarPackageSlug }) => {
 
   return (
     <div className="relative flex flex-col md:flex-row h-screen">
-      <div className="flex-1">
-        <MapContainer
-          center={[riderLocation.latitude, riderLocation.longitude]}
-          zoom={13}
-          style={{ height: "100%", width: "100%" }}
-          ref={mapRef}
-        >
-          <TileLayer
-            url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-            attribution="&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors &copy; <a href='https://carto.com/'>CARTO</a>"
-          />
-
-          <Marker
-            key={userID}
-            position={[riderLocation.latitude, riderLocation.longitude]}
-            icon={driverMarker}
+      {mapPosition ? (
+        <div className="flex-1">
+          <MapContainer
+            center={mapPosition}
+            zoom={13}
+            style={{ height: "100%", width: "100%" }}
+            ref={mapRef}
           >
-            <Popup>
-              Driver ID: {userID}
-              <br />
-              Geohash: {driverGeohash}
-            </Popup>
-          </Marker>
+            <TileLayer
+              url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+              attribution="&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors &copy; <a href='https://carto.com/'>CARTO</a>"
+            />
 
-          {startLocation && (
-            <Marker
-              position={[startLocation.longitude, startLocation.latitude]}
-              icon={startLocationMarker}
-            >
-              <Popup>Start Location</Popup>
+            <Marker key={userID} position={mapPosition} icon={driverMarker}>
+              <Popup>
+                Driver ID: {userID}
+                <br />
+                Geohash: {driverGeohash}
+              </Popup>
             </Marker>
-          )}
 
-          {destination && (
-            <Marker
-              position={[destination.longitude, destination.latitude]}
-              icon={destinationMarker}
-            >
-              <Popup>Destination</Popup>
-            </Marker>
-          )}
+            {startLocation && (
+              <Marker
+                position={[startLocation.latitude, startLocation.longitude]}
+                icon={startLocationMarker}
+              >
+                <Popup>Start Location</Popup>
+              </Marker>
+            )}
 
-          {parsedRoute && <RoutingControl route={parsedRoute} />}
+            {destination && (
+              <Marker
+                position={[destination.latitude, destination.longitude]}
+                icon={destinationMarker}
+              >
+                <Popup>Destination</Popup>
+              </Marker>
+            )}
 
-          <MapClickHandler onClick={handleMapClick} />
-        </MapContainer>
-      </div>
+            {parsedRoute && <RoutingControl route={parsedRoute} />}
+          </MapContainer>
+        </div>
+      ) : (
+        <LoadingMap />
+      )}
 
       <div className="flex flex-col md:w-100 bg-white border-t md:border-t-0 md:border-l">
         <div className="p-4 border-b">

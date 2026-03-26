@@ -4,8 +4,8 @@ import { Coordinate, CarPackageSlug, Trip, Driver } from '@/lib/types';
 import { useEffect, useState } from 'react';
 
 interface useDriverConnectionProps {
-  location: Coordinate;
-  geohash: string;
+  location?: Coordinate;
+  geohash?: string;
   userID: string;
   packageSlug: CarPackageSlug;
 }
@@ -21,6 +21,19 @@ export const useDriverStreamConnection = ({
   const [error, setError] = useState<string | null>(null);
   const [ws, setWs] = useState<WebSocket | null>(null);
   const [driver, setDriver] = useState<Driver | null>(null);
+
+  useEffect(() => {
+    if (!ws || ws.readyState !== WebSocket.OPEN || !location || !geohash) return;
+
+    const sendUpdate = () => {
+      ws.send(JSON.stringify({
+        type: TripEvents.DriverLocation,
+        data: { location, geohash }
+      }));
+    };
+
+    sendUpdate();
+  }, [ws, location, geohash]);
 
   useEffect(() => {
     if (!userID) return;
@@ -58,7 +71,6 @@ export const useDriverStreamConnection = ({
           break;
       }
 
-
       if (isValidTripEvent(message.type)) {
         setTripStatus(message.type);
       } else {
@@ -76,7 +88,7 @@ export const useDriverStreamConnection = ({
     };
 
     return () => {
-      console.log('Closing WebSocket');
+      console.log('Closing WebSocket...');
       if (websocket.readyState === WebSocket.OPEN) {
         websocket.close();
       }

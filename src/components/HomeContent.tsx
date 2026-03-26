@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { DriverPackageSelector } from "@/components/DriverPackageSelector";
 import icon from "leaflet/dist/images/marker-icon.png";
 import iconShadow from "leaflet/dist/images/marker-shadow.png";
-import { CarPackageSlug } from "@/lib/types";
+import { CarPackageSlug, UserType } from "@/lib/types";
 
 // Dynamic imports
 const DriverMap = dynamic(
@@ -31,11 +31,32 @@ if (typeof window !== "undefined") {
 }
 
 export function HomeContent() {
-  const [userType, setUserType] = useState<"driver" | "rider" | null>(null);
+  const [userType, setUserType] = useState<UserType>();
   const [packageSlug, setPackageSlug] = useState<CarPackageSlug | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
   const payment = searchParams.get("payment");
+
+  const handleUserTypeSelection = (type: UserType) => {
+    // Check if browser supports geolocation
+    if (!navigator.geolocation) {
+      alert("Geolocation is not supported by your browser");
+      return;
+    }
+
+    // Trigger the browser permissions popup
+    navigator.geolocation.getCurrentPosition(
+      () => setUserType(type),
+      (error) => {
+        if (error.code === error.PERMISSION_DENIED) {
+          alert("Please enable location access to use Wayfare");
+        } else {
+          alert("Failed to fetch current location. Please try again");
+        }
+      },
+      { enableHighAccuracy: true },
+    );
+  };
 
   if (payment === "success") {
     return (
@@ -76,7 +97,7 @@ export function HomeContent() {
 
   return (
     <>
-      {userType === null && (
+      {userType && (
         <div className="flex flex-col items-center justify-center h-screen gap-6 px-4">
           <div className="bg-white p-8 rounded-2xl shadow-lg text-center max-w-md w-full">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">
@@ -88,14 +109,14 @@ export function HomeContent() {
             <div className="space-y-4">
               <Button
                 className="w-full text-lg py-6 bg-primary hover:bg-primary/90"
-                onClick={() => setUserType("rider")}
+                onClick={() => handleUserTypeSelection("rider")}
               >
                 I Need a Ride
               </Button>
               <Button
                 className="w-full text-lg py-6"
                 variant="outline"
-                onClick={() => setUserType("driver")}
+                onClick={() => handleUserTypeSelection("driver")}
               >
                 I Want to Drive
               </Button>

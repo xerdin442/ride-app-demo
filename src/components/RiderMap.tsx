@@ -29,6 +29,8 @@ import { getGeohashBounds } from "@/lib/utils";
 import { useRiderStreamConnection } from "@/hooks/useRiderStreamConnection";
 import { RiderTripOverview } from "./RiderTripOverview";
 import { RoutingControl } from "./RoutingControl";
+import { useLocationTracker } from "@/hooks/useLocationTracker";
+import LoadingMap from "./LoadingMap";
 
 const userMarker = new L.Icon({
   iconUrl:
@@ -43,6 +45,13 @@ const driverMarker = new L.Icon({
   iconAnchor: [15, 30],
 });
 
+const destinationMarker = new L.Icon({
+  iconUrl:
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ed/Map_pin_icon.svg/176px-Map_pin_icon.svg.png",
+  iconSize: [40, 40], // Size of the marker
+  iconAnchor: [20, 40], // Anchor point
+});
+
 interface RiderMapProps {
   onRouteSelected?: (distance: number) => void;
 }
@@ -55,11 +64,7 @@ export default function RiderMap({ onRouteSelected }: RiderMapProps) {
   const userID = useMemo(() => crypto.randomUUID(), []);
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const location = {
-    latitude: 37.7749,
-    longitude: -122.4194,
-  };
-
+  const { location, mapPosition } = useLocationTracker();
   const {
     drivers,
     error,
@@ -67,14 +72,12 @@ export default function RiderMap({ onRouteSelected }: RiderMapProps) {
     assignedDriver,
     paymentSession,
     resetTripStatus,
-  } = useRiderStreamConnection(location, userID);
-
-  console.log(tripStatus);
+  } = useRiderStreamConnection(userID);
 
   const handleMapClick = async (e: L.LeafletMouseEvent) => {
-    if (trip?.tripID) {
-      return;
-    }
+    if (trip?.tripID) return;
+
+    if (!location) return;
 
     if (debounceTimeoutRef.current) {
       clearTimeout(debounceTimeoutRef.current);
@@ -87,7 +90,6 @@ export default function RiderMap({ onRouteSelected }: RiderMapProps) {
         pickup: [location.latitude, location.longitude],
         destination: [e.latlng.lat, e.latlng.lng],
       });
-      console.log(data);
 
       const parsedRoute = data.route.geometry[0].coordinates.map(
         (coord) => [coord.longitude, coord.latitude] as [number, number],
@@ -174,84 +176,87 @@ export default function RiderMap({ onRouteSelected }: RiderMapProps) {
 
   return (
     <div className="relative flex flex-col md:flex-row h-screen">
-      <div className={`${destination ? "flex-[0.7]" : "flex-1"}`}>
-        <MapContainer
-          center={[location.latitude, location.longitude]}
-          zoom={13}
-          style={{ height: "100%", width: "100%" }}
-          ref={mapRef}
-        >
-          <TileLayer
-            url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-            attribution="&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors &copy; <a href='https://carto.com/'>CARTO</a>"
-          />
-          <Marker
-            position={[location.latitude, location.longitude]}
-            icon={userMarker}
-          />
+      {mapPosition ? (
+        <div className={`${destination ? "flex-[0.7]" : "flex-1"}`}>
+          <MapContainer
+            center={mapPosition}
+            zoom={13}
+            style={{ height: "100%", width: "100%" }}
+            ref={mapRef}
+          >
+            <TileLayer
+              url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+              attribution="&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors &copy; <a href='https://carto.com/'>CARTO</a>"
+            />
+            <Marker position={mapPosition} icon={userMarker} />
 
-          {/* Render geohash grid cells */}
-          {drivers?.map((driver) => (
-            <Rectangle
-              key={`grid-${driver?.geohash}`}
-              bounds={
-                getGeohashBounds(driver?.geohash) as L.LatLngBoundsExpression
-              }
-              pathOptions={{
-                color: "#3388ff",
-                weight: 1,
-                fillOpacity: 0.1,
-              }}
-            >
-              <Popup>Geohash: {driver?.geohash}</Popup>
-            </Rectangle>
-          ))}
+            {/* Render geohash grid cells */}
+            {drivers?.map((driver) => (
+              <Rectangle
+                key={`grid-${driver?.geohash}`}
+                bounds={
+                  getGeohashBounds(driver?.geohash) as L.LatLngBoundsExpression
+                }
+                pathOptions={{
+                  color: "#3388ff",
+                  weight: 1,
+                  fillOpacity: 0.1,
+                }}
+              >
+                <Popup>Geohash: {driver?.geohash}</Popup>
+              </Rectangle>
+            ))}
 
-          {/* Render driver markers */}
-          {drivers?.map((driver) => (
-            <Marker
-              key={driver?.id}
-              position={[
-                driver?.location?.latitude,
-                driver?.location?.longitude,
-              ]}
-              icon={driverMarker}
-            >
-              <Popup>
-                Driver ID: {driver?.id}
-                <br />
-                Geohash: {driver?.geohash}
-                <br />
-                Name: {driver?.name}
-                <br />
-                Car Plate: {driver?.carPlate}
-                <br />
-                <Image
-                  src={driver?.profilePicture}
-                  alt={`${driver?.name}'s profile picture`}
-                  width={100}
-                  height={100}
-                />
-              </Popup>
-            </Marker>
-          ))}
-          {destination && (
-            <Marker position={destination} icon={userMarker}>
-              <Popup>Destination</Popup>
-            </Marker>
-          )}
+            {/* Render driver markers */}
+            {drivers?.map((driver) => (
+              <Marker
+                key={driver?.id}
+                position={[
+                  driver?.location?.latitude,
+                  driver?.location?.longitude,
+                ]}
+                icon={driverMarker}
+              >
+                <Popup>
+                  Driver ID: {driver?.id}
+                  <br />
+                  Geohash: {driver?.geohash}
+                  <br />
+                  Name: {driver?.name}
+                  <br />
+                  Car Plate: {driver?.carPlate}
+                  <br />
+                  <Image
+                    src={driver?.profilePicture}
+                    alt="Driver profile picture"
+                    width={100}
+                    height={100}
+                  />
+                </Popup>
+              </Marker>
+            ))}
 
-          {selectedCarPackage && (
-            <div className="mt-4 z-9999 absolute bottom-0 right-0">
-              <Button className="w-full">
-                Request Ride with {selectedCarPackage.packageSlug}
-              </Button>
-            </div>
-          )}
-          {trip && <RoutingControl route={trip.route} />}
-          <MapClickHandler onClick={handleMapClick} />
-        </MapContainer>
-      </div>
+            {destination && (
+              <Marker position={destination} icon={destinationMarker}>
+                <Popup>Destination</Popup>
+              </Marker>
+            )}
+
+            {selectedCarPackage && (
+              <div className="mt-4 z-9999 absolute bottom-0 right-0">
+                <Button className="w-full">
+                  Request Ride with {selectedCarPackage.packageSlug}
+                </Button>
+              </div>
+            )}
+
+            {trip && <RoutingControl route={trip.route} />}
+            <MapClickHandler onClick={handleMapClick} />
+          </MapContainer>
+        </div>
+      ) : (
+        <LoadingMap />
+      )}
 
       <div className="flex-[0.4]">
         <RiderTripOverview

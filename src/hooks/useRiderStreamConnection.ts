@@ -1,9 +1,9 @@
 import { WEBSOCKET_URL } from '@/lib/constants';
 import { TripEvents, PaymentEventSessionCreatedData, BackendEndpoints, ServerWsMessage, isValidWsMessage } from '@/lib/contracts';
-import { Coordinate, Driver, Trip } from '@/lib/types';
+import { Driver, Trip } from '@/lib/types';
 import { useEffect, useState } from 'react';
 
-export function useRiderStreamConnection(location: Coordinate, userID: string) {
+export function useRiderStreamConnection(userID: string) {
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [tripStatus, setTripStatus] = useState<TripEvents | null>(null);
   const [paymentSession, setPaymentSession] = useState<PaymentEventSessionCreatedData | null>(null);
@@ -14,18 +14,6 @@ export function useRiderStreamConnection(location: Coordinate, userID: string) {
     if (!userID) return;
 
     const ws = new WebSocket(`${WEBSOCKET_URL}${BackendEndpoints.WS_RIDERS}?userID=${userID}`);
-
-    ws.onopen = () => {
-      // Send initial location
-      if (location) {
-        ws.send(JSON.stringify({
-          type: TripEvents.DriverLocation,
-          data: {
-            location,
-          }
-        }));
-      }
-    };
 
     ws.onmessage = (event) => {
       const message = JSON.parse(event.data) as ServerWsMessage;
@@ -66,12 +54,11 @@ export function useRiderStreamConnection(location: Coordinate, userID: string) {
     };
 
     return () => {
-      console.log('Closing WebSocket');
+      console.log('Closing WebSocket...');
       if (ws.readyState === WebSocket.OPEN) {
         ws.close();
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userID]);
 
   const resetTripStatus = () => {
