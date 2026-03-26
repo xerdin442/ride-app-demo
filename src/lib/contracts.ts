@@ -30,7 +30,7 @@ export type ServerWsMessage =
   | TripCreatedRequest
   | NoDriversFoundRequest;
 
-export type ClientWsMessage = DriverResponseToTripResponse
+export type ClientWsMessage = DriverResponseToTripRequest
 
 interface TripCreatedRequest {
   type: TripEvents.Created;
@@ -72,7 +72,7 @@ interface DriverLocationRequest {
   data: Driver[];
 }
 
-interface DriverResponseToTripResponse {
+interface DriverResponseToTripRequest {
   type: TripEvents.DriverTripAccept | TripEvents.DriverTripDecline;
   data: {
     tripID: string;

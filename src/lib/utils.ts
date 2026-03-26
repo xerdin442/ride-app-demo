@@ -1,6 +1,25 @@
 import { clsx, type ClassValue } from "clsx"
 import Geohash from "latlon-geohash"
+import L from "leaflet";
 import { twMerge } from "tailwind-merge"
+
+export const DriverMarker = new L.Icon({
+  iconUrl: "/car.png",
+  iconSize: [30, 30],
+  iconAnchor: [15, 30],
+});
+
+export const TripPickupMarker = new L.Icon({
+  iconUrl: "/user.png",
+  iconSize: [30, 40],
+  iconAnchor: [20, 40],
+});
+
+export const TripDestinationMarker = new L.Icon({
+  iconUrl: "/location-pin.png",
+  iconSize: [40, 40],
+  iconAnchor: [20, 40],
+});
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))

@@ -13,25 +13,11 @@ import { useDriverStreamConnection } from "@/hooks/useDriverStreamConnection";
 import { RoutingControl } from "./RoutingControl";
 import { useLocationTracker } from "@/hooks/useLocationTracker";
 import LoadingMap from "./LoadingMap";
-
-const driverMarker = new L.Icon({
-  iconUrl: "https://www.svgrepo.com/show/25407/car.svg",
-  iconSize: [30, 30],
-  iconAnchor: [15, 30],
-});
-
-const startLocationMarker = new L.Icon({
-  iconUrl: "https://www.svgrepo.com/show/535711/user.svg",
-  iconSize: [30, 40], // Size of the marker
-  iconAnchor: [20, 40], // Anchor point
-});
-
-const destinationMarker = new L.Icon({
-  iconUrl:
-    "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ed/Map_pin_icon.svg/176px-Map_pin_icon.svg.png",
-  iconSize: [40, 40], // Size of the marker
-  iconAnchor: [20, 40], // Anchor point
-});
+import {
+  TripDestinationMarker,
+  DriverMarker,
+  TripPickupMarker,
+} from "@/lib/utils";
 
 export const DriverMap = ({ packageSlug }: { packageSlug: CarPackageSlug }) => {
   const mapRef = useRef<L.Map>(null);
@@ -135,7 +121,7 @@ export const DriverMap = ({ packageSlug }: { packageSlug: CarPackageSlug }) => {
               attribution="&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors &copy; <a href='https://carto.com/'>CARTO</a>"
             />
 
-            <Marker key={userID} position={mapPosition} icon={driverMarker}>
+            <Marker key={userID} position={mapPosition} icon={DriverMarker}>
               <Popup>
                 Driver ID: {userID}
                 <br />
@@ -146,7 +132,7 @@ export const DriverMap = ({ packageSlug }: { packageSlug: CarPackageSlug }) => {
             {startLocation && (
               <Marker
                 position={[startLocation.latitude, startLocation.longitude]}
-                icon={startLocationMarker}
+                icon={TripPickupMarker}
               >
                 <Popup>Start Location</Popup>
               </Marker>
@@ -155,7 +141,7 @@ export const DriverMap = ({ packageSlug }: { packageSlug: CarPackageSlug }) => {
             {destination && (
               <Marker
                 position={[destination.latitude, destination.longitude]}
-                icon={destinationMarker}
+                icon={TripDestinationMarker}
               >
                 <Popup>Destination</Popup>
               </Marker>

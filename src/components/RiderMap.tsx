@@ -25,32 +25,17 @@ import {
   RequestRideProps,
   HTTPTripStartResponse,
 } from "@/lib/types";
-import { getGeohashBounds } from "@/lib/utils";
+import {
+  getGeohashBounds,
+  TripDestinationMarker,
+  TripPickupMarker,
+  DriverMarker,
+} from "@/lib/utils";
 import { useRiderStreamConnection } from "@/hooks/useRiderStreamConnection";
 import { RiderTripOverview } from "./RiderTripOverview";
 import { RoutingControl } from "./RoutingControl";
 import { useLocationTracker } from "@/hooks/useLocationTracker";
 import LoadingMap from "./LoadingMap";
-
-const userMarker = new L.Icon({
-  iconUrl:
-    "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ed/Map_pin_icon.svg/176px-Map_pin_icon.svg.png",
-  iconSize: [40, 40], // Size of the marker
-  iconAnchor: [20, 40], // Anchor point
-});
-
-const driverMarker = new L.Icon({
-  iconUrl: "https://www.svgrepo.com/show/25407/car.svg",
-  iconSize: [30, 30],
-  iconAnchor: [15, 30],
-});
-
-const destinationMarker = new L.Icon({
-  iconUrl:
-    "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ed/Map_pin_icon.svg/176px-Map_pin_icon.svg.png",
-  iconSize: [40, 40], // Size of the marker
-  iconAnchor: [20, 40], // Anchor point
-});
 
 interface RiderMapProps {
   onRouteSelected?: (distance: number) => void;
@@ -188,7 +173,7 @@ export default function RiderMap({ onRouteSelected }: RiderMapProps) {
               url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
               attribution="&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors &copy; <a href='https://carto.com/'>CARTO</a>"
             />
-            <Marker position={mapPosition} icon={userMarker} />
+            <Marker position={mapPosition} icon={TripPickupMarker} />
 
             {/* Render geohash grid cells */}
             {drivers?.map((driver) => (
@@ -215,7 +200,7 @@ export default function RiderMap({ onRouteSelected }: RiderMapProps) {
                   driver?.location?.latitude,
                   driver?.location?.longitude,
                 ]}
-                icon={driverMarker}
+                icon={DriverMarker}
               >
                 <Popup>
                   Driver ID: {driver?.id}
@@ -237,7 +222,7 @@ export default function RiderMap({ onRouteSelected }: RiderMapProps) {
             ))}
 
             {destination && (
-              <Marker position={destination} icon={destinationMarker}>
+              <Marker position={destination} icon={TripDestinationMarker}>
                 <Popup>Destination</Popup>
               </Marker>
             )}

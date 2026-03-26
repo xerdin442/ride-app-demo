@@ -41,19 +41,6 @@ export const useDriverStreamConnection = ({
     const websocket = new WebSocket(`${WEBSOCKET_URL}${BackendEndpoints.WS_DRIVERS}?userID=${userID}&packageSlug=${packageSlug}`);
     setWs(websocket);
 
-    websocket.onopen = () => {
-      if (location) {
-        // Send initial location
-        websocket.send(JSON.stringify({
-          type: TripEvents.DriverLocation,
-          data: {
-            location,
-            geohash,
-          }
-        }));
-      }
-    };
-
     websocket.onmessage = (event) => {
       const message = JSON.parse(event.data) as ServerWsMessage;
 
