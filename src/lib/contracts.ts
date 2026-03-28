@@ -10,7 +10,6 @@ export enum BackendEndpoints {
 export enum TripEvents {
   NoDriversFound = "trip.event.no_drivers_found",
   DriverAssigned = "trip.event.driver_assigned",
-  AvailableDrivers = "trip.event.available_drivers",
   TripCompleted = "trip.cmd.completed",
   TripCancelled = "trip.cmd.cancelled",
   DriverTripRequest = "driver.event.trip_request",
@@ -23,7 +22,6 @@ export enum TripEvents {
 export type ServerWsMessage =
   | PaymentSessionCreatedResponse
   | DriverAssignedResponse
-  | AvailableDriversResponse
   | DriverTripAvailableResponse
   | NoDriversFoundResponse;
 
@@ -51,16 +49,11 @@ interface DriverAssignedResponse {
   data: Trip;
 }
 
-interface AvailableDriversResponse {
-  type: TripEvents.AvailableDrivers;
-  data: Driver[];
-}
-
 interface DriverTripActionRequest {
   type: TripEvents.DriverTripAccept | TripEvents.DriverTripDecline;
   data: {
     trip: Trip;
-    driver?: Driver;
+    driver: Driver;
   };
 }
 

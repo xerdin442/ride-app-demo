@@ -92,7 +92,7 @@ export const RiderTripOverview = ({
     return (
       <TripOverviewCard
         title="Trip completed!"
-        description="Your trip is completed, thank you for using our service!"
+        description="Your trip is completed, thank you for using Wayfare!"
       >
         <Button variant="outline" className="w-full" onClick={onCancel}>
           Go back

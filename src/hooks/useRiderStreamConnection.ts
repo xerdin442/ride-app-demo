@@ -4,7 +4,6 @@ import { Driver, PaymentSession } from '@/lib/types';
 import { useEffect, useState } from 'react';
 
 export function useRiderStreamConnection(userID: string) {
-  const [drivers, setDrivers] = useState<Driver[]>([]);
   const [tripStatus, setTripStatus] = useState<TripEvents | null>(null);
   const [paymentSession, setPaymentSession] = useState<PaymentSession | null>(null);
   const [assignedDriver, setAssignedDriver] = useState<Driver>();
@@ -24,9 +23,6 @@ export function useRiderStreamConnection(userID: string) {
       }
 
       switch (message.type) {
-        case TripEvents.AvailableDrivers:
-          setDrivers(message.data);
-          break;
         case TripEvents.PaymentSessionCreated:
           setPaymentSession(message.data);
           setTripStatus(message.type);
@@ -63,5 +59,5 @@ export function useRiderStreamConnection(userID: string) {
     setPaymentSession(null);
   }
 
-  return { drivers, assignedDriver, error, tripStatus, paymentSession, resetTripStatus };
+  return { assignedDriver, error, tripStatus, paymentSession, resetTripStatus };
 }

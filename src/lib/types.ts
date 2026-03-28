@@ -9,11 +9,6 @@ export interface Trip {
 	driver?: Driver;
 }
 
-export interface RequestRideProps {
-	pickup: [number, number],
-	destination: [number, number],
-}
-
 export interface Coordinate {
 	latitude: number,
 	longitude: number,

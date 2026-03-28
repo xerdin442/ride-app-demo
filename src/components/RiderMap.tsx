@@ -1,13 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import {
-  MapContainer,
-  Marker,
-  Popup,
-  Rectangle,
-  TileLayer,
-} from "react-leaflet";
+import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
 import L from "leaflet";
 import { useMemo, useRef, useState } from "react";
 import { MapClickHandler } from "./MapClickHandler";
@@ -20,9 +14,8 @@ import {
   HTTPTripStartRequestPayload,
   HTTPTripStartResponse,
 } from "@/lib/contracts";
-import { TripPreview, RouteFare, RequestRideProps } from "@/lib/types";
+import { TripPreview, RouteFare } from "@/lib/types";
 import {
-  getGeohashBounds,
   TripDestinationMarker,
   TripPickupMarker,
   DriverMarker,
@@ -46,14 +39,8 @@ export default function RiderMap({ onRouteSelected }: RiderMapProps) {
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const { location, mapPosition } = useLocationTracker();
-  const {
-    drivers,
-    error,
-    tripStatus,
-    assignedDriver,
-    paymentSession,
-    resetTripStatus,
-  } = useRiderStreamConnection(userID);
+  const { error, tripStatus, assignedDriver, paymentSession, resetTripStatus } =
+    useRiderStreamConnection(userID);
 
   const handleMapClick = async (e: L.LeafletMouseEvent) => {
     if (tripPreview?.tripID) return;
@@ -66,11 +53,12 @@ export default function RiderMap({ onRouteSelected }: RiderMapProps) {
 
     debounceTimeoutRef.current = setTimeout(async () => {
       setDestination([e.latlng.lat, e.latlng.lng]);
+      if (!destination) return;
 
-      const data = await requestRidePreview({
-        pickup: [location.latitude, location.longitude],
-        destination: [e.latlng.lat, e.latlng.lng],
-      });
+      const data = await requestRidePreview(
+        [location.latitude, location.longitude],
+        destination,
+      );
 
       const parsedRoute = data.route.geometry[0].coordinates.map(
         (coord) => [coord.longitude, coord.latitude] as [number, number],
@@ -90,10 +78,10 @@ export default function RiderMap({ onRouteSelected }: RiderMapProps) {
   };
 
   const requestRidePreview = async (
-    props: RequestRideProps,
+    pickup: [number, number],
+    destination: [number, number],
   ): Promise<HTTPTripPreviewResponse> => {
-    const { pickup, destination } = props;
-    const payload = {
+    const payload: HTTPTripPreviewRequestPayload = {
       userID: userID,
       pickup: {
         latitude: pickup[0],
@@ -103,7 +91,7 @@ export default function RiderMap({ onRouteSelected }: RiderMapProps) {
         latitude: destination[0],
         longitude: destination[1],
       },
-    } as HTTPTripPreviewRequestPayload;
+    };
 
     const response = await fetch(`${API_URL}${BackendEndpoints.PREVIEW_TRIP}`, {
       method: "POST",
@@ -169,53 +157,36 @@ export default function RiderMap({ onRouteSelected }: RiderMapProps) {
               url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
               attribution="&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors &copy; <a href='https://carto.com/'>CARTO</a>"
             />
+
             <Marker position={mapPosition} icon={TripPickupMarker} />
 
-            {/* Render geohash grid cells */}
-            {drivers?.map((driver) => (
-              <Rectangle
-                key={`grid-${driver?.geohash}`}
-                bounds={
-                  getGeohashBounds(driver?.geohash) as L.LatLngBoundsExpression
-                }
-                pathOptions={{
-                  color: "#3388ff",
-                  weight: 1,
-                  fillOpacity: 0.1,
-                }}
-              >
-                <Popup>Geohash: {driver?.geohash}</Popup>
-              </Rectangle>
-            ))}
-
-            {/* Render driver markers */}
-            {drivers?.map((driver) => (
+            {assignedDriver && (
               <Marker
-                key={driver?.id}
+                key={assignedDriver.id}
                 position={[
-                  driver?.location?.latitude,
-                  driver?.location?.longitude,
+                  assignedDriver.location.latitude,
+                  assignedDriver.location.longitude,
                 ]}
                 icon={DriverMarker}
               >
                 <Popup>
-                  Driver ID: {driver?.id}
+                  Driver ID: {assignedDriver.id}
                   <br />
-                  Geohash: {driver?.geohash}
+                  Geohash: {assignedDriver.geohash}
                   <br />
-                  Name: {driver?.name}
+                  Name: {assignedDriver.name}
                   <br />
-                  Car Plate: {driver?.carPlate}
+                  Car Plate: {assignedDriver.carPlate}
                   <br />
                   <Image
-                    src={driver?.profilePicture}
+                    src={assignedDriver.profilePicture}
                     alt="Driver profile picture"
                     width={100}
                     height={100}
                   />
                 </Popup>
               </Marker>
-            ))}
+            )}
 
             {destination && (
               <Marker position={destination} icon={TripDestinationMarker}>
