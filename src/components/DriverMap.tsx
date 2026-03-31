@@ -39,9 +39,7 @@ export const DriverMap = ({ packageSlug }: { packageSlug: CarPackageSlug }) => {
     resetTripStatus,
   } = useDriverStreamConnection({
     location: driverLocation,
-    geohash: driverGeohash,
     userID,
-    packageSlug,
   });
 
   const handleAcceptTrip = () => {
@@ -77,6 +75,20 @@ export const DriverMap = ({ packageSlug }: { packageSlug: CarPackageSlug }) => {
 
     setTripStatus(TripEvents.DriverTripDecline);
     resetTripStatus();
+  };
+
+  const handleConfirmPickup = () => {
+    if (!requestedTrip || !requestedTrip.id || !driver) {
+      alert("No trip ID found or driver is not set");
+      return;
+    }
+
+    sendMessage({
+      type: TripEvents.DriverConfirmPickup,
+      data: { trip: requestedTrip },
+    });
+
+    setTripStatus(TripEvents.DriverConfirmPickup);
   };
 
   const parsedRoute = useMemo(
@@ -162,6 +174,7 @@ export const DriverMap = ({ packageSlug }: { packageSlug: CarPackageSlug }) => {
             status={tripStatus}
             onAcceptTrip={handleAcceptTrip}
             onDeclineTrip={handleDeclineTrip}
+            onConfirmPickup={handleConfirmPickup}
           />
         </div>
       </div>

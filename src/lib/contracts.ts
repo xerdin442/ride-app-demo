@@ -10,10 +10,13 @@ export enum BackendEndpoints {
 export enum TripEvents {
   NoDriversFound = "trip.event.no_drivers_found",
   DriverAssigned = "trip.event.driver_assigned",
+  DriverArrival = "trip.event.driver_arrival",
   TripCompleted = "trip.cmd.completed",
   TripCancelled = "trip.cmd.cancelled",
+  TripAborted = "trip.cmd.aborted",
   DriverTripRequest = "driver.event.trip_request",
   DriverLocationUpdate = "driver.cmd.location_update",
+  DriverConfirmPickup = "driver.cmd.confirm_pickup",
   DriverTripAccept = "driver.cmd.trip_accept",
   DriverTripDecline = "driver.cmd.trip_decline",
   PaymentSessionCreated = "payment.event.session_created",
@@ -22,13 +25,16 @@ export enum TripEvents {
 export type ServerWsMessage =
   | PaymentSessionCreatedResponse
   | DriverAssignedResponse
+  | DriverArrivalResponse
   | DriverTripAvailableResponse
-  | NoDriversFoundResponse;
+  | NoDriversFoundResponse
+  | TripEndedResponse;
 
 export type ClientWsMessage =
   | DriverTripActionRequest
+  | DriverConfirmPickupRequest
   | DriverLocationUpdateRequest
-  | RiderTripUpdateRequest
+  | RiderTripUpdateRequest;
 
 interface PaymentSessionCreatedResponse {
   type: TripEvents.PaymentSessionCreated;
@@ -46,7 +52,18 @@ interface DriverTripAvailableResponse {
 
 interface DriverAssignedResponse {
   type: TripEvents.DriverAssigned;
-  data: Trip;
+  data: {
+    trip: Trip;
+    driver: Driver;
+  };
+}
+
+interface DriverArrivalResponse {
+  type: TripEvents.DriverArrival
+}
+
+interface TripEndedResponse {
+  type: TripEvents.TripCompleted | TripEvents.TripCancelled | TripEvents.TripAborted
 }
 
 interface DriverTripActionRequest {
@@ -57,17 +74,19 @@ interface DriverTripActionRequest {
   };
 }
 
+interface DriverConfirmPickupRequest {
+  type: TripEvents.DriverConfirmPickup
+  data: { trip: Trip; }
+}
+
 interface DriverLocationUpdateRequest {
   type: TripEvents.DriverLocationUpdate;
-  data: {
-    location: Coordinate;
-    geohash: string;
-  }
+  data: { coords: Coordinate }
 }
 
 interface RiderTripUpdateRequest {
   type: TripEvents.TripCompleted | TripEvents.TripCancelled
-  data: { tripID: string }
+  data: { trip: Trip; }
 }
 
 export interface HTTPTripPreviewResponse {

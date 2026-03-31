@@ -3,10 +3,10 @@ export type UserType = "driver" | "rider"
 export interface Trip {
 	id: string;
 	userID: string;
+	driverID?: string;
 	status: string;
 	selectedFare: RouteFare;
 	route: Route;
-	driver?: Driver;
 }
 
 export interface Coordinate {
@@ -47,7 +47,6 @@ export interface TripPreview {
 export interface Driver {
 	id: string;
 	location: Coordinate;
-	geohash: string;
 	name: string;
 	profilePicture: string;
 	carPlate: string;

@@ -8,6 +8,7 @@ interface DriverTripOverviewProps {
   status?: TripEvents | null;
   onAcceptTrip?: () => void;
   onDeclineTrip?: () => void;
+  onConfirmPickup?: () => void;
 }
 
 export const DriverTripOverview = ({
@@ -15,6 +16,7 @@ export const DriverTripOverview = ({
   status,
   onAcceptTrip,
   onDeclineTrip,
+  onConfirmPickup,
 }: DriverTripOverviewProps) => {
   if (!trip) {
     return (
@@ -40,6 +42,12 @@ export const DriverTripOverview = ({
       </TripOverviewCard>
     );
   }
+
+  // Cancelled trip status
+
+  // Completed trip status
+
+  // Confirm pickup status (amount to receive and timer)
 
   if (status === TripEvents.DriverTripAccept) {
     return (

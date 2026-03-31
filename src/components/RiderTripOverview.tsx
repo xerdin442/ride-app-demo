@@ -17,7 +17,9 @@ interface RiderTripOverviewProps {
   assignedDriver?: Driver | null;
   paymentSession?: PaymentSession | null;
   onPackageSelect: (carPackage: RouteFare) => void;
-  onCancel: () => void;
+  onCompleteTrip: () => void;
+  onCancelTrip: () => void;
+  onReset: () => void;
 }
 
 export const RiderTripOverview = ({
@@ -26,7 +28,9 @@ export const RiderTripOverview = ({
   assignedDriver,
   paymentSession,
   onPackageSelect,
-  onCancel,
+  onCompleteTrip,
+  onCancelTrip,
+  onReset,
 }: RiderTripOverviewProps) => {
   if (!trip || !trip.tripID) {
     return (
@@ -65,7 +69,7 @@ export const RiderTripOverview = ({
         title="No drivers found"
         description="No drivers found for your trip, please try again later"
       >
-        <Button variant="outline" className="w-full" onClick={onCancel}>
+        <Button variant="outline" className="w-full" onClick={onReset}>
           Go back
         </Button>
       </TripOverviewCard>
@@ -81,12 +85,14 @@ export const RiderTripOverview = ({
         <div className="flex flex-col space-y-3 justify-center items-center mb-4">
           {/* <p>Driver: {trip.id}</p> */}
         </div>
-        <Button variant="destructive" className="w-full" onClick={onCancel}>
+        <Button variant="destructive" className="w-full" onClick={onCancelTrip}>
           Cancel current trip
         </Button>
       </TripOverviewCard>
     );
   }
+
+  // driver arrival (complete trip button)
 
   if (status === TripEvents.TripCompleted) {
     return (
@@ -94,7 +100,7 @@ export const RiderTripOverview = ({
         title="Trip completed!"
         description="Your trip is completed, thank you for using Wayfare!"
       >
-        <Button variant="outline" className="w-full" onClick={onCancel}>
+        <Button variant="outline" className="w-full" onClick={onReset}>
           Go back
         </Button>
       </TripOverviewCard>
@@ -107,7 +113,7 @@ export const RiderTripOverview = ({
         title="Trip cancelled!"
         description="Your trip is cancelled, please try again later"
       >
-        <Button variant="outline" className="w-full" onClick={onCancel}>
+        <Button variant="outline" className="w-full" onClick={onReset}>
           Go back
         </Button>
       </TripOverviewCard>
@@ -136,7 +142,7 @@ export const RiderTripOverview = ({
             </h3>
           )}
 
-          <Button variant="destructive" className="w-full" onClick={onCancel}>
+          <Button variant="destructive" className="w-full" onClick={onCancelTrip}>
             Cancel
           </Button>
         </div>
@@ -149,7 +155,7 @@ export const RiderTripOverview = ({
       <DriverList
         trip={trip}
         onPackageSelect={onPackageSelect}
-        onCancel={onCancel}
+        onCancel={onReset}
       />
     );
   }

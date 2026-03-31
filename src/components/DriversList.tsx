@@ -68,11 +68,7 @@ export function DriverList({
           })}
         </div>
         <div className="mt-6 space-y-4">
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={() => onCancel()}
-          >
+          <Button variant="outline" className="w-full" onClick={onCancel}>
             Back to Map
           </Button>
         </div>

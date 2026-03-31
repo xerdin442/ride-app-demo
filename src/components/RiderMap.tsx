@@ -13,6 +13,7 @@ import {
   BackendEndpoints,
   HTTPTripStartRequestPayload,
   HTTPTripStartResponse,
+  TripEvents,
 } from "@/lib/contracts";
 import { TripPreview, RouteFare } from "@/lib/types";
 import {
@@ -26,11 +27,7 @@ import { RoutingControl } from "./RoutingControl";
 import { useLocationTracker } from "@/hooks/useLocationTracker";
 import LoadingMap from "./LoadingMap";
 
-interface RiderMapProps {
-  onRouteSelected?: (distance: number) => void;
-}
-
-export default function RiderMap({ onRouteSelected }: RiderMapProps) {
+export default function RiderMap() {
   const [tripPreview, setTripPreview] = useState<TripPreview | null>(null);
   const [selectedCarPackage] = useState<RouteFare | null>(null);
   const [destination, setDestination] = useState<[number, number] | null>(null);
@@ -39,8 +36,16 @@ export default function RiderMap({ onRouteSelected }: RiderMapProps) {
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const { location, mapPosition } = useLocationTracker();
-  const { error, tripStatus, assignedDriver, paymentSession, resetTripStatus } =
-    useRiderStreamConnection(userID);
+  const {
+    error,
+    tripStatus,
+    requestedTrip,
+    assignedDriver,
+    paymentSession,
+    setTripStatus,
+    resetTripStatus,
+    sendMessage,
+  } = useRiderStreamConnection(userID);
 
   const handleMapClick = async (e: L.LeafletMouseEvent) => {
     if (tripPreview?.tripID) return;
@@ -71,9 +76,6 @@ export default function RiderMap({ onRouteSelected }: RiderMapProps) {
         distance: data.route.distance,
         duration: data.route.duration,
       });
-
-      // Call onRouteSelected with the route distance
-      onRouteSelected?.(data.route.distance);
     }, 500);
   };
 
@@ -134,6 +136,28 @@ export default function RiderMap({ onRouteSelected }: RiderMapProps) {
   };
 
   const handleCancelTrip = () => {
+    if (!requestedTrip) return;
+
+    sendMessage({
+      type: TripEvents.TripCancelled,
+      data: { trip: requestedTrip },
+    });
+
+    setTripStatus(TripEvents.TripCancelled);
+  };
+
+  const handleCompleteTrip = () => {
+    if (!requestedTrip) return;
+
+    sendMessage({
+      type: TripEvents.TripCompleted,
+      data: { trip: requestedTrip },
+    });
+
+    setTripStatus(TripEvents.TripCompleted);
+  };
+
+  const resetTripPreview = () => {
     setTripPreview(null);
     setDestination(null);
     resetTripStatus();
@@ -171,8 +195,6 @@ export default function RiderMap({ onRouteSelected }: RiderMapProps) {
               >
                 <Popup>
                   Driver ID: {assignedDriver.id}
-                  <br />
-                  Geohash: {assignedDriver.geohash}
                   <br />
                   Name: {assignedDriver.name}
                   <br />
@@ -217,7 +239,9 @@ export default function RiderMap({ onRouteSelected }: RiderMapProps) {
           status={tripStatus}
           paymentSession={paymentSession}
           onPackageSelect={handleStartTrip}
-          onCancel={handleCancelTrip}
+          onCancelTrip={handleCancelTrip}
+          onCompleteTrip={handleCompleteTrip}
+          onReset={resetTripPreview}
         />
       </div>
     </div>

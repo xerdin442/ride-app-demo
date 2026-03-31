@@ -7,21 +7,17 @@ import {
   isValidTripEvent,
   ClientWsMessage
 } from '@/lib/contracts';
-import { Coordinate, CarPackageSlug, Trip, Driver } from '@/lib/types';
+import { Coordinate, Trip, Driver } from '@/lib/types';
 import { useCallback, useEffect, useState } from 'react';
 
 interface useDriverConnectionProps {
   location?: Coordinate;
-  geohash?: string;
   userID: string;
-  packageSlug: CarPackageSlug;
 }
 
 export const useDriverStreamConnection = ({
   location,
-  geohash,
   userID,
-  packageSlug
 }: useDriverConnectionProps) => {
   const [requestedTrip, setRequestedTrip] = useState<Trip | null>(null)
   const [tripStatus, setTripStatus] = useState<TripEvents | null>(null);
@@ -38,18 +34,21 @@ export const useDriverStreamConnection = ({
   }, [ws]);
 
   useEffect(() => {
-    if (!ws || !location || !geohash) return;
+    if (!ws || !location) return;
+
+    // Send location updates for drivers without an active trip or trip request
+    if (!requestedTrip) return;
 
     sendMessage({
       type: TripEvents.DriverLocationUpdate,
-      data: { location, geohash }
+      data: { coords: location, }
     })
-  }, [ws, location, geohash, sendMessage]);
+  }, [ws, location, sendMessage, requestedTrip]);
 
   useEffect(() => {
     if (!userID) return;
 
-    const websocket = new WebSocket(`${WEBSOCKET_URL}${BackendEndpoints.WS_DRIVERS}?userID=${userID}&packageSlug=${packageSlug}`);
+    const websocket = new WebSocket(`${WEBSOCKET_URL}${BackendEndpoints.WS_DRIVERS}?userID=${userID}`);
     setWs(websocket);
 
     websocket.onmessage = (event) => {
@@ -63,6 +62,12 @@ export const useDriverStreamConnection = ({
       switch (message.type) {
         case TripEvents.DriverTripRequest:
           setRequestedTrip(message.data);
+          break;
+        case TripEvents.TripAborted:
+        case TripEvents.TripCancelled:
+        case TripEvents.TripCompleted:
+          setRequestedTrip(null)
+          setTripStatus(message.type)
           break;
       }
 
