@@ -6,7 +6,6 @@ export interface Trip {
 	driverId?: string;
 	status: string;
 	selectedFare: RideFare;
-	route: Route;
 }
 
 export interface Coordinate {

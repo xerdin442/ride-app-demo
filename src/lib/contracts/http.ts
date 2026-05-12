@@ -1,7 +1,6 @@
-import { Coordinate, Route, RideFare, Driver, Rider } from "../types";
+import { Coordinate, RideFare, Driver, Rider } from "../types";
 
 export interface PreviewTripResponse {
-  route: Route;
   rideFares: RideFare[];
 }
 
