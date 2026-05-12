@@ -4,7 +4,7 @@ import { Button } from "./ui/button";
 import { Skeleton } from "./ui/skeleton";
 import { DriverCard } from "./DriverCard";
 import { TripEvents } from "@/lib/contracts";
-import { TripPreview, Driver, RouteFare, PaymentSession } from "@/lib/types";
+import { TripPreview, Driver, RideFare, PaymentSession } from "@/lib/types";
 import {
   convertSecondsToMinutes,
   convertMetersToKilometers,
@@ -16,7 +16,7 @@ interface RiderTripOverviewProps {
   status: TripEvents | null;
   assignedDriver?: Driver | null;
   paymentSession?: PaymentSession | null;
-  onPackageSelect: (carPackage: RouteFare) => void;
+  onPackageSelect: (carPackage: RideFare) => void;
   onCompleteTrip: () => void;
   onCancelTrip: () => void;
   onReset: () => void;
@@ -142,7 +142,11 @@ export const RiderTripOverview = ({
             </h3>
           )}
 
-          <Button variant="destructive" className="w-full" onClick={onCancelTrip}>
+          <Button
+            variant="destructive"
+            className="w-full"
+            onClick={onCancelTrip}
+          >
             Cancel
           </Button>
         </div>

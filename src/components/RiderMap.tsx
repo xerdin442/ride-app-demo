@@ -15,7 +15,7 @@ import {
   HTTPTripStartResponse,
   TripEvents,
 } from "@/lib/contracts";
-import { TripPreview, RouteFare } from "@/lib/types";
+import { TripPreview, RideFare } from "@/lib/types";
 import {
   TripDestinationMarker,
   TripPickupMarker,
@@ -29,7 +29,7 @@ import LoadingMap from "./LoadingMap";
 
 export default function RiderMap() {
   const [tripPreview, setTripPreview] = useState<TripPreview | null>(null);
-  const [selectedCarPackage] = useState<RouteFare | null>(null);
+  const [selectedCarPackage] = useState<RideFare | null>(null);
   const [destination, setDestination] = useState<[number, number] | null>(null);
   const mapRef = useRef<L.Map>(null);
   const userID = useMemo(() => crypto.randomUUID(), []);
@@ -105,7 +105,7 @@ export default function RiderMap() {
     return data;
   };
 
-  const handleStartTrip = async (fare: RouteFare) => {
+  const handleStartTrip = async (fare: RideFare) => {
     const payload = {
       rideFareID: fare.id,
       userID: userID,

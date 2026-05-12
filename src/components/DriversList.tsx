@@ -1,5 +1,5 @@
 import { Clock } from "lucide-react";
-import { TripPreview, RouteFare } from "@/lib/types";
+import { TripPreview, RideFare } from "@/lib/types";
 import {
   convertMetersToKilometers,
   convertSecondsToMinutes,
@@ -10,7 +10,7 @@ import { CarPackageDetails } from "./CarPackageDetails";
 
 interface DriverListProps {
   trip: TripPreview | null;
-  onPackageSelect: (fare: RouteFare) => void;
+  onPackageSelect: (fare: RideFare) => void;
   onCancel: () => void;
 }
 

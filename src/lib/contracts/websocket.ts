@@ -1,45 +1,40 @@
-import { Trip, Driver, RouteFare, Coordinate, Route, PaymentSession } from "./types";
-
-export enum BackendEndpoints {
-  PREVIEW_TRIP = "/trip/preview",
-  START_TRIP = "/trip/start",
-  WS_DRIVERS = "/drivers",
-  WS_RIDERS = "/riders",
-}
+import { Coordinate, Driver, Trip } from "../types";
 
 export enum TripEvents {
   NoDriversFound = "trip.event.no_drivers_found",
   DriverAssigned = "trip.event.driver_assigned",
   DriverArrival = "trip.event.driver_arrival",
-  TripCompleted = "trip.cmd.completed",
   TripCancelled = "trip.cmd.cancelled",
   TripAborted = "trip.cmd.aborted",
+  TripRated = "trip.cmd.rated",
+  TripRatingRequired = "trip.event.rating_required",
   DriverTripRequest = "driver.event.trip_request",
   DriverLocationUpdate = "driver.cmd.location_update",
   DriverConfirmPickup = "driver.cmd.confirm_pickup",
   DriverTripAccept = "driver.cmd.trip_accept",
   DriverTripDecline = "driver.cmd.trip_decline",
-  PaymentSessionCreated = "payment.event.session_created",
+  DriverEndTrip = "driver.cmd.end_trip",
+  PaymentRequired = "trip.event.payment_required",
+  PaymentSuccess = "payment.event.success",
+  PaymentFailed = "payment.event.failed",
+  CashPaymentReceived = "payment.event.cash_payment_received",
+  CashOptionPreferred = "payment.event.cash_option_preferred"
 }
 
 export type ServerWsMessage =
-  | PaymentSessionCreatedResponse
   | DriverAssignedResponse
   | DriverArrivalResponse
   | DriverTripAvailableResponse
   | NoDriversFoundResponse
-  | TripEndedResponse;
+  | TripEndedResponse
+  | PaymentEventResponse
+  | TripRatingRequiredResponse;
 
 export type ClientWsMessage =
   | DriverTripActionRequest
-  | DriverConfirmPickupRequest
   | DriverLocationUpdateRequest
-  | RiderTripUpdateRequest;
-
-interface PaymentSessionCreatedResponse {
-  type: TripEvents.PaymentSessionCreated;
-  data: PaymentSession;
-}
+  | RiderTripUpdateRequest
+  | TripRatingRequest;
 
 interface NoDriversFoundResponse {
   type: TripEvents.NoDriversFound;
@@ -63,20 +58,34 @@ interface DriverArrivalResponse {
 }
 
 interface TripEndedResponse {
-  type: TripEvents.TripCompleted | TripEvents.TripCancelled | TripEvents.TripAborted
+  type: TripEvents.TripCancelled | TripEvents.TripAborted
+}
+
+interface PaymentEventResponse {
+  type: TripEvents.PaymentRequired | TripEvents.PaymentSuccess | TripEvents.PaymentFailed;
+}
+
+interface TripRatingRequiredResponse {
+  type: TripEvents.TripRatingRequired,
+  data: {
+    tripId: string
+    pickup: Coordinate
+    destination: Coordinate
+    date: string
+  }
 }
 
 interface DriverTripActionRequest {
-  type: TripEvents.DriverTripAccept | TripEvents.DriverTripDecline;
+  type:
+  | TripEvents.DriverTripAccept
+  | TripEvents.DriverTripDecline
+  | TripEvents.DriverEndTrip
+  | TripEvents.DriverConfirmPickup
+  | TripEvents.CashPaymentReceived;
   data: {
     trip: Trip;
-    driver: Driver;
+    driver?: Driver;
   };
-}
-
-interface DriverConfirmPickupRequest {
-  type: TripEvents.DriverConfirmPickup
-  data: { trip: Trip; }
 }
 
 interface DriverLocationUpdateRequest {
@@ -85,28 +94,17 @@ interface DriverLocationUpdateRequest {
 }
 
 interface RiderTripUpdateRequest {
-  type: TripEvents.TripCompleted | TripEvents.TripCancelled
+  type: TripEvents.TripCancelled | TripEvents.CashOptionPreferred;
   data: { trip: Trip; }
 }
 
-export interface HTTPTripPreviewResponse {
-  route: Route;
-  rideFares: RouteFare[];
-}
-
-export interface HTTPTripStartResponse {
-  tripID: string;
-}
-
-export interface HTTPTripStartRequestPayload {
-  rideFareID: string;
-  userID: string;
-}
-
-export interface HTTPTripPreviewRequestPayload {
-  userID: string;
-  pickup: Coordinate;
-  destination: Coordinate;
+interface TripRatingRequest {
+  type: TripEvents.TripRated,
+  data: {
+    tripId: string,
+    rating: number
+    comment: string
+  }
 }
 
 export function isValidTripEvent(event: string): event is TripEvents {

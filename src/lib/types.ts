@@ -2,10 +2,10 @@ export type UserType = "driver" | "rider"
 
 export interface Trip {
 	id: string;
-	userID: string;
-	driverID?: string;
+	userId: string;
+	driverId?: string;
 	status: string;
-	selectedFare: RouteFare;
+	selectedFare: RideFare;
 	route: Route;
 }
 
@@ -28,33 +28,40 @@ export enum CarPackageSlug {
 	LUXURY = "luxury",
 }
 
-export interface RouteFare {
+export enum DriverTier {
+	BRONZE = "bronze",
+	SILVER = "silver",
+	GOLD = "gold",
+}
+
+export interface RideFare {
 	id: string,
 	packageSlug: CarPackageSlug,
-	basePrice: number,
-	totalPriceInCents?: number,
+	amount: number,
 	route: Route,
 }
 
 export interface TripPreview {
 	tripID: string,
 	route: [number, number][],
-	rideFares: RouteFare[],
+	rideFares: RideFare[],
 	duration: number,
 	distance: number,
 }
 
 export interface Driver {
 	id: string;
-	location: Coordinate;
 	name: string;
 	profilePicture: string;
 	carPlate: string;
+	currentRating: number;
+	totalCompletedTrips: number;
+	tier: DriverTier;
 }
 
-export interface PaymentSession {
-	tripID: string;
-	sessionID: string;
-	amount: number;
-	currency: string;
+export interface Rider {
+	id: string;
+	name: string;
+	email: string;
+	profilePicture: string;
 }
