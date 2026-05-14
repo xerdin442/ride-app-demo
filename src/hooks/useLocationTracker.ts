@@ -26,7 +26,7 @@ export const useLocationTracker = () => {
         (error) => console.error("User location tracker error:", error),
         { enableHighAccuracy: true },
       );
-    }, 3000); // Update user location every 5 seconds
+    }, 3500); // Update user location every 3.5 seconds
 
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);

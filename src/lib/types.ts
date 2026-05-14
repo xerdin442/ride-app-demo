@@ -64,3 +64,10 @@ export interface Rider {
 	email: string;
 	profilePicture: string;
 }
+
+export interface RatingRequiredData {
+	tripId: string
+	pickup: Coordinate
+	destination: Coordinate
+	date: string
+}

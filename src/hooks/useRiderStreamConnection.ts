@@ -1,25 +1,25 @@
 import { WEBSOCKET_URL } from '@/lib/constants';
-import { TripEvents, BackendEndpoints, ServerWsMessage, isValidWsMessage, ClientWsMessage } from '@/lib/contracts';
-import { Driver, PaymentSession, Trip } from '@/lib/types';
+import { TripEvents, ServerWsResponse, isValidWsMessage, ClientWsMessage } from '@/lib/contracts/websocket';
+import { Driver, RatingRequiredData, Trip } from '@/lib/types';
 import { useEffect, useState } from 'react';
 
-export function useRiderStreamConnection(userID: string) {
+export function useRiderStreamConnection(userId: string) {
   const [tripStatus, setTripStatus] = useState<TripEvents | null>(null);
   const [requestedTrip, setRequestedTrip] = useState<Trip | null>(null);
-  const [paymentSession, setPaymentSession] = useState<PaymentSession | null>(null);
-  const [assignedDriver, setAssignedDriver] = useState<Driver>();
+  const [ratingData, setRatingData] = useState<RatingRequiredData | null>(null);
+  const [assignedDriver, setAssignedDriver] = useState<Driver | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ws, setWs] = useState<WebSocket | null>(null);
 
   useEffect(() => {
-    if (!userID) return;
+    if (!userId) return;
 
-    const ws = new WebSocket(`${WEBSOCKET_URL}${BackendEndpoints.WS_RIDERS}?userID=${userID}`);
+    const ws = new WebSocket(`${WEBSOCKET_URL}/ws/riders?user_id=${userId}`);
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setWs(ws)
 
     ws.onmessage = (event) => {
-      const message = JSON.parse(event.data) as ServerWsMessage;
+      const message = JSON.parse(event.data) as ServerWsResponse;
 
       if (!message || !isValidWsMessage(message)) {
         setError(`Unknown message type "${message}", allowed types are: ${Object.values(TripEvents).join(', ')}`);
@@ -27,8 +27,11 @@ export function useRiderStreamConnection(userID: string) {
       }
 
       switch (message.type) {
-        case TripEvents.PaymentSessionCreated:
-          setPaymentSession(message.data);
+        case TripEvents.PaymentFailed:
+        case TripEvents.PaymentSuccess:
+        case TripEvents.PaymentRequired:
+        case TripEvents.DriverArrival:
+        case TripEvents.NoDriversFound:
           setTripStatus(message.type);
           break;
         case TripEvents.DriverAssigned:
@@ -36,11 +39,9 @@ export function useRiderStreamConnection(userID: string) {
           setRequestedTrip(message.data.trip);
           setTripStatus(message.type);
           break;
-        case TripEvents.DriverArrival:
-          setTripStatus(message.type);
-          break;
-        case TripEvents.NoDriversFound:
-          setTripStatus(message.type);
+        case TripEvents.TripRatingRequired:
+          setTripStatus(message.type)
+          setRatingData(message.data)
           break;
       }
     };
@@ -60,7 +61,7 @@ export function useRiderStreamConnection(userID: string) {
         ws.close();
       }
     };
-  }, [userID]);
+  }, [userId]);
 
   const sendMessage = (message: ClientWsMessage) => {
     if (ws?.readyState === WebSocket.OPEN) {
@@ -72,14 +73,16 @@ export function useRiderStreamConnection(userID: string) {
 
   const resetTripStatus = () => {
     setTripStatus(null);
-    setPaymentSession(null);
+    setAssignedDriver(null);
+    setRequestedTrip(null);
+    setRatingData(null);
   }
 
   return {
     assignedDriver,
     requestedTrip,
+    ratingData,
     tripStatus,
-    paymentSession,
     setTripStatus,
     resetTripStatus,
     sendMessage,

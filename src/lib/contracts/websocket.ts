@@ -1,4 +1,4 @@
-import { Coordinate, Driver, Trip } from "../types";
+import { Coordinate, Driver, RatingRequiredData, Trip } from "../types";
 
 export enum TripEvents {
   NoDriversFound = "trip.event.no_drivers_found",
@@ -21,7 +21,7 @@ export enum TripEvents {
   CashOptionPreferred = "payment.event.cash_option_preferred"
 }
 
-export type ServerWsMessage =
+export type ServerWsResponse =
   | DriverAssignedResponse
   | DriverArrivalResponse
   | DriverTripAvailableResponse
@@ -67,12 +67,7 @@ interface PaymentEventResponse {
 
 interface TripRatingRequiredResponse {
   type: TripEvents.TripRatingRequired,
-  data: {
-    tripId: string
-    pickup: Coordinate
-    destination: Coordinate
-    date: string
-  }
+  data: RatingRequiredData
 }
 
 interface DriverTripActionRequest {
@@ -111,6 +106,6 @@ export function isValidTripEvent(event: string): event is TripEvents {
   return Object.values(TripEvents).includes(event as TripEvents);
 }
 
-export function isValidWsMessage(message: ServerWsMessage): message is ServerWsMessage {
+export function isValidWsMessage(message: ServerWsResponse): message is ServerWsResponse {
   return isValidTripEvent(message.type);
 }
