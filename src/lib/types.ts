@@ -41,7 +41,7 @@ export interface RideFare {
 }
 
 export interface TripPreview {
-	tripID: string,
+	tripId: string,
 	route: [number, number][],
 	rideFares: RideFare[],
 	duration: number,

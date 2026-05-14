@@ -1,4 +1,29 @@
 import { Coordinate, RideFare, Driver, Rider } from "../types";
+import { API_URL, AUTH_TOKEN } from "../constants";
+
+export async function sendRequest<T, K>(
+  url: string,
+  method: string,
+  requiresAuth: boolean,
+  payload?: T,
+) {
+  const response = await fetch(`${API_URL}${url}`, {
+    method,
+    body: payload ? JSON.stringify(payload) : null,
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: requiresAuth ? `Bearer ${localStorage.getItem(AUTH_TOKEN)}` : "",
+    },
+  });
+
+  const result = (await response.json()) as {
+    data?: K,
+    message?: string,
+    error?: string
+  };
+
+  return { result, status: response.status };
+}
 
 export interface PreviewTripResponse {
   rideFares: RideFare[];

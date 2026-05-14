@@ -1,54 +1,56 @@
 "use client";
 
 import Image from "next/image";
-import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
 import L from "leaflet";
-import { useMemo, useRef, useState } from "react";
-import { MapClickHandler } from "./MapClickHandler";
-import { Button } from "./ui/button";
-import { API_URL } from "@/lib/constants";
+import { useRef, useState } from "react";
 import {
-  HTTPTripPreviewResponse,
-  HTTPTripPreviewRequestPayload,
-  BackendEndpoints,
-  HTTPTripStartRequestPayload,
-  HTTPTripStartResponse,
-  TripEvents,
-} from "@/lib/contracts";
+  MapContainer,
+  Marker,
+  Polyline,
+  Popup,
+  TileLayer,
+} from "react-leaflet";
+import {
+  PreviewTripResponse,
+  PreviewTripRequest,
+  StartTripRequest,
+  StartTripResponse,
+  sendRequest,
+} from "@/lib/contracts/http";
+import { TripEvents } from "@/lib/contracts/websocket";
 import { TripPreview, RideFare } from "@/lib/types";
 import {
   TripDestinationMarker,
   TripPickupMarker,
   DriverMarker,
 } from "@/lib/utils";
-import { useRiderStreamConnection } from "@/hooks/useRiderStreamConnection";
-import { RiderTripOverview } from "./RiderTripOverview";
-import { RoutingControl } from "./RoutingControl";
 import { useLocationTracker } from "@/hooks/useLocationTracker";
+import { useRiderStreamConnection } from "@/hooks/useRiderStreamConnection";
 import LoadingMap from "./LoadingMap";
+import { MapClickHandler } from "./MapClickHandler";
+import { RiderTripOverview } from "./RiderTripOverview";
 
-export default function RiderMap() {
+export default function RiderMap({ userId }: { userId: string }) {
   const [tripPreview, setTripPreview] = useState<TripPreview | null>(null);
-  const [selectedCarPackage] = useState<RideFare | null>(null);
   const [destination, setDestination] = useState<[number, number] | null>(null);
   const mapRef = useRef<L.Map>(null);
-  const userID = useMemo(() => crypto.randomUUID(), []);
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const { location, mapPosition } = useLocationTracker();
   const {
     error,
     tripStatus,
+    tripRatingData,
     requestedTrip,
     assignedDriver,
-    paymentSession,
+    driverLocation,
     setTripStatus,
     resetTripStatus,
     sendMessage,
-  } = useRiderStreamConnection(userID);
+  } = useRiderStreamConnection(userId);
 
   const handleMapClick = async (e: L.LeafletMouseEvent) => {
-    if (tripPreview?.tripID) return;
+    if (tripPreview?.tripId) return;
 
     if (!location) return;
 
@@ -64,17 +66,19 @@ export default function RiderMap() {
         [location.latitude, location.longitude],
         destination,
       );
+      if (!data) return;
 
-      const parsedRoute = data.route.geometry[0].coordinates.map(
+      const route = data.rideFares[0].route;
+      const parsedRoute = route.geometry[0].coordinates.map(
         (coord) => [coord.longitude, coord.latitude] as [number, number],
       );
 
       setTripPreview({
-        tripID: "",
+        tripId: "",
         route: parsedRoute,
         rideFares: data.rideFares,
-        distance: data.route.distance,
-        duration: data.route.duration,
+        distance: route.distance,
+        duration: route.duration,
       });
     }, 500);
   };
@@ -82,9 +86,8 @@ export default function RiderMap() {
   const requestRidePreview = async (
     pickup: [number, number],
     destination: [number, number],
-  ): Promise<HTTPTripPreviewResponse> => {
-    const payload: HTTPTripPreviewRequestPayload = {
-      userID: userID,
+  ): Promise<PreviewTripResponse | null> => {
+    const payload: PreviewTripRequest = {
       pickup: {
         latitude: pickup[0],
         longitude: pickup[1],
@@ -95,44 +98,49 @@ export default function RiderMap() {
       },
     };
 
-    const response = await fetch(`${API_URL}${BackendEndpoints.PREVIEW_TRIP}`, {
-      method: "POST",
-      body: JSON.stringify(payload),
-    });
-    const { data } = (await response.json()) as {
-      data: HTTPTripPreviewResponse;
-    };
-    return data;
+    const { result } = await sendRequest<
+      PreviewTripRequest,
+      PreviewTripResponse
+    >("/trip/preview", "POST", true, payload);
+
+    if (!result.data) {
+      // handle error display
+      return null;
+    }
+
+    return result.data;
   };
 
   const handleStartTrip = async (fare: RideFare) => {
-    const payload = {
-      rideFareID: fare.id,
-      userID: userID,
-    } as HTTPTripStartRequestPayload;
+    if (!fare.id) return;
 
-    if (!fare.id) {
-      alert("No Fare ID in the payload");
+    const payload: StartTripRequest = {
+      rideFareId: fare.id,
+    };
+
+    const { result } = await sendRequest<StartTripRequest, StartTripResponse>(
+      "/trip/start",
+      "POST",
+      true,
+      payload,
+    );
+
+    if (!result.data) {
+      // handle error display
       return;
     }
 
-    const response = await fetch(`${API_URL}${BackendEndpoints.START_TRIP}`, {
-      method: "POST",
-      body: JSON.stringify(payload),
-    });
-    const data = (await response.json()) as HTTPTripStartResponse;
-
-    if (response.ok && tripPreview) {
+    if (tripPreview) {
       setTripPreview(
         (prev) =>
           ({
             ...prev,
-            tripID: data.tripID,
+            tripId: result.data?.tripId,
           }) as TripPreview,
       );
     }
 
-    return data;
+    return;
   };
 
   const handleCancelTrip = () => {
@@ -146,15 +154,15 @@ export default function RiderMap() {
     setTripStatus(TripEvents.TripCancelled);
   };
 
-  const handleCompleteTrip = () => {
+  const handleCashPayment = () => {
     if (!requestedTrip) return;
 
     sendMessage({
-      type: TripEvents.TripCompleted,
+      type: TripEvents.CashOptionPreferred,
       data: { trip: requestedTrip },
     });
 
-    setTripStatus(TripEvents.TripCompleted);
+    setTripStatus(TripEvents.CashOptionPreferred);
   };
 
   const resetTripPreview = () => {
@@ -184,13 +192,10 @@ export default function RiderMap() {
 
             <Marker position={mapPosition} icon={TripPickupMarker} />
 
-            {assignedDriver && (
+            {assignedDriver && driverLocation && (
               <Marker
                 key={assignedDriver.id}
-                position={[
-                  assignedDriver.location.latitude,
-                  assignedDriver.location.longitude,
-                ]}
+                position={[driverLocation.latitude, driverLocation.longitude]}
                 icon={DriverMarker}
               >
                 <Popup>
@@ -216,15 +221,10 @@ export default function RiderMap() {
               </Marker>
             )}
 
-            {selectedCarPackage && (
-              <div className="mt-4 z-9999 absolute bottom-0 right-0">
-                <Button className="w-full">
-                  Request Ride with {selectedCarPackage.packageSlug}
-                </Button>
-              </div>
+            {tripPreview && (
+              <Polyline positions={tripPreview.route} color="blue" />
             )}
 
-            {tripPreview && <RoutingControl route={tripPreview.route} />}
             <MapClickHandler onClick={handleMapClick} />
           </MapContainer>
         </div>
@@ -237,10 +237,9 @@ export default function RiderMap() {
           trip={tripPreview}
           assignedDriver={assignedDriver}
           status={tripStatus}
-          paymentSession={paymentSession}
           onPackageSelect={handleStartTrip}
+          onCashPayment={handleCashPayment}
           onCancelTrip={handleCancelTrip}
-          onCompleteTrip={handleCompleteTrip}
           onReset={resetTripPreview}
         />
       </div>

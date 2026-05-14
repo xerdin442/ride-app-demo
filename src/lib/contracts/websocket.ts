@@ -5,6 +5,7 @@ export enum TripEvents {
   DriverAssigned = "trip.event.driver_assigned",
   DriverArrival = "trip.event.driver_arrival",
   TripCancelled = "trip.cmd.cancelled",
+  TripCompleted = "trip.cmd.completed",
   TripAborted = "trip.cmd.aborted",
   TripRated = "trip.cmd.rated",
   TripRatingRequired = "trip.event.rating_required",
@@ -23,6 +24,7 @@ export enum TripEvents {
 
 export type ServerWsResponse =
   | DriverAssignedResponse
+  | DriverLocationResponse
   | DriverArrivalResponse
   | DriverTripAvailableResponse
   | NoDriversFoundResponse
@@ -53,12 +55,17 @@ interface DriverAssignedResponse {
   };
 }
 
+interface DriverLocationResponse {
+  type: TripEvents.DriverLocationUpdate;
+  data: Coordinate;
+}
+
 interface DriverArrivalResponse {
   type: TripEvents.DriverArrival
 }
 
 interface TripEndedResponse {
-  type: TripEvents.TripCancelled | TripEvents.TripAborted
+  type: TripEvents.TripCancelled | TripEvents.TripCompleted | TripEvents.TripAborted
 }
 
 interface PaymentEventResponse {
@@ -85,7 +92,10 @@ interface DriverTripActionRequest {
 
 interface DriverLocationUpdateRequest {
   type: TripEvents.DriverLocationUpdate;
-  data: { coords: Coordinate }
+  data: {
+    coords: Coordinate,
+    riderId?: string,
+  }
 }
 
 interface RiderTripUpdateRequest {

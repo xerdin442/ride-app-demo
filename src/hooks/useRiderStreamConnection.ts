@@ -1,13 +1,14 @@
 import { WEBSOCKET_URL } from '@/lib/constants';
 import { TripEvents, ServerWsResponse, isValidWsMessage, ClientWsMessage } from '@/lib/contracts/websocket';
-import { Driver, RatingRequiredData, Trip } from '@/lib/types';
+import { Coordinate, Driver, RatingRequiredData, Trip } from '@/lib/types';
 import { useEffect, useState } from 'react';
 
 export function useRiderStreamConnection(userId: string) {
   const [tripStatus, setTripStatus] = useState<TripEvents | null>(null);
   const [requestedTrip, setRequestedTrip] = useState<Trip | null>(null);
-  const [ratingData, setRatingData] = useState<RatingRequiredData | null>(null);
+  const [tripRatingData, setTripRatingData] = useState<RatingRequiredData | null>(null);
   const [assignedDriver, setAssignedDriver] = useState<Driver | null>(null);
+  const [driverLocation, setDriverLocation] = useState<Coordinate | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ws, setWs] = useState<WebSocket | null>(null);
 
@@ -32,6 +33,7 @@ export function useRiderStreamConnection(userId: string) {
         case TripEvents.PaymentRequired:
         case TripEvents.DriverArrival:
         case TripEvents.NoDriversFound:
+        case TripEvents.TripCompleted:
           setTripStatus(message.type);
           break;
         case TripEvents.DriverAssigned:
@@ -39,9 +41,12 @@ export function useRiderStreamConnection(userId: string) {
           setRequestedTrip(message.data.trip);
           setTripStatus(message.type);
           break;
+        case TripEvents.DriverLocationUpdate:
+          setDriverLocation(message.data);
+          break;
         case TripEvents.TripRatingRequired:
           setTripStatus(message.type)
-          setRatingData(message.data)
+          setTripRatingData(message.data)
           break;
       }
     };
@@ -74,14 +79,16 @@ export function useRiderStreamConnection(userId: string) {
   const resetTripStatus = () => {
     setTripStatus(null);
     setAssignedDriver(null);
+    setDriverLocation(null);
     setRequestedTrip(null);
-    setRatingData(null);
+    setTripRatingData(null);
   }
 
   return {
+    driverLocation,
     assignedDriver,
     requestedTrip,
-    ratingData,
+    tripRatingData,
     tripStatus,
     setTripStatus,
     resetTripStatus,

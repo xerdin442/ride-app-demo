@@ -3,8 +3,8 @@ import { Card } from "./ui/card";
 import { Button } from "./ui/button";
 import { Skeleton } from "./ui/skeleton";
 import { DriverCard } from "./DriverCard";
-import { TripEvents } from "@/lib/contracts";
-import { TripPreview, Driver, RideFare, PaymentSession } from "@/lib/types";
+import { TripEvents } from "@/lib/contracts/websocket";
+import { TripPreview, Driver, RideFare } from "@/lib/types";
 import {
   convertSecondsToMinutes,
   convertMetersToKilometers,
@@ -15,9 +15,8 @@ interface RiderTripOverviewProps {
   trip: TripPreview | null;
   status: TripEvents | null;
   assignedDriver?: Driver | null;
-  paymentSession?: PaymentSession | null;
   onPackageSelect: (carPackage: RideFare) => void;
-  onCompleteTrip: () => void;
+  onCashPayment: () => void;
   onCancelTrip: () => void;
   onReset: () => void;
 }
@@ -26,9 +25,7 @@ export const RiderTripOverview = ({
   trip,
   status,
   assignedDriver,
-  paymentSession,
   onPackageSelect,
-  onCompleteTrip,
   onCancelTrip,
   onReset,
 }: RiderTripOverviewProps) => {
