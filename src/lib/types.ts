@@ -52,6 +52,7 @@ export interface Driver {
 	name: string;
 	profilePicture: string;
 	carPlate: string;
+	packageSlug: CarPackageSlug;
 	currentRating: number;
 	totalCompletedTrips: number;
 	tier: DriverTier;

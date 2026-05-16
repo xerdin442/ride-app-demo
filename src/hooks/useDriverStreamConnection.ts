@@ -76,5 +76,12 @@ export const useDriverStreamConnection = (userId: string, location?: Coordinate)
     setRequestedTrip(null);
   }
 
-  return { error, tripStatus, requestedTrip, resetTripStatus, sendMessage, setTripStatus };
+  return {
+    error,
+    tripStatus,
+    requestedTrip,
+    resetTripStatus,
+    sendMessage,
+    setTripStatus
+  };
 }

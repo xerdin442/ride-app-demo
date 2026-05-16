@@ -88,10 +88,11 @@ interface TripRatingRequiredResponse {
   data: RatingRequiredData
 }
 
-interface DriverTripActionRequest {
+export interface DriverTripActionRequest {
   type:
   | TripEvents.DriverTripAccept
   | TripEvents.DriverTripDecline
+  | TripEvents.DriverStartTrip
   | TripEvents.DriverEndTrip
   | TripEvents.DriverConfirmPickup
   | TripEvents.CashPaymentReceived;

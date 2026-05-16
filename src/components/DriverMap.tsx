@@ -1,16 +1,19 @@
 "use client";
 
-import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
+import {
+  MapContainer,
+  Marker,
+  Polyline,
+  Popup,
+  TileLayer,
+} from "react-leaflet";
 import L from "leaflet";
 import { useMemo } from "react";
 import { useRef } from "react";
-import * as Geohash from "ngeohash";
-import { DriverCard } from "./DriverCard";
-import { TripEvents } from "@/lib/contracts";
-import { CarPackageSlug } from "@/lib/types";
+import { DriverTripActionRequest, TripEvents } from "@/lib/contracts/websocket";
+import { Driver } from "@/lib/types";
 import { DriverTripOverview } from "./DriverTripOverview";
 import { useDriverStreamConnection } from "@/hooks/useDriverStreamConnection";
-import { RoutingControl } from "./RoutingControl";
 import { useLocationTracker } from "@/hooks/useLocationTracker";
 import LoadingMap from "./LoadingMap";
 import {
@@ -19,96 +22,55 @@ import {
   TripPickupMarker,
 } from "@/lib/utils";
 
-export const DriverMap = ({ packageSlug }: { packageSlug: CarPackageSlug }) => {
+export const DriverMap = ({ user }: { user: Driver }) => {
   const mapRef = useRef<L.Map>(null);
-  const userID = useMemo(() => crypto.randomUUID(), []);
   const { location: driverLocation, mapPosition } = useLocationTracker();
-
-  const driverGeohash = useMemo(() => {
-    if (!driverLocation) return;
-    return Geohash.encode(driverLocation.latitude, driverLocation.longitude, 7);
-  }, [driverLocation]);
 
   const {
     error,
-    driver,
     tripStatus,
     requestedTrip,
     sendMessage,
     setTripStatus,
     resetTripStatus,
-  } = useDriverStreamConnection({
-    location: driverLocation,
-    userID,
-  });
+  } = useDriverStreamConnection(user.id, driverLocation);
 
-  const handleAcceptTrip = () => {
-    if (!requestedTrip || !requestedTrip.id || !driver) {
-      alert("No trip ID found or driver is not set");
-      return;
-    }
+  const handleTripAction = (
+    action: DriverTripActionRequest["type"],
+    request?: boolean,
+  ) => {
+    if (!requestedTrip) return;
 
     sendMessage({
-      type: TripEvents.DriverTripAccept,
+      type: action,
       data: {
         trip: requestedTrip,
-        driver,
+        driver: request ? user : undefined,
       },
     });
 
-    setTripStatus(TripEvents.DriverTripAccept);
-  };
-
-  const handleDeclineTrip = () => {
-    if (!requestedTrip || !requestedTrip.id || !driver) {
-      alert("No trip ID found or driver is not set");
-      return;
+    if (action === TripEvents.DriverTripDecline) {
+      resetTripStatus();
+    } else {
+      setTripStatus(action);
     }
-
-    sendMessage({
-      type: TripEvents.DriverTripDecline,
-      data: {
-        trip: requestedTrip,
-        driver,
-      },
-    });
-
-    setTripStatus(TripEvents.DriverTripDecline);
-    resetTripStatus();
-  };
-
-  const handleConfirmPickup = () => {
-    if (!requestedTrip || !requestedTrip.id || !driver) {
-      alert("No trip ID found or driver is not set");
-      return;
-    }
-
-    sendMessage({
-      type: TripEvents.DriverConfirmPickup,
-      data: { trip: requestedTrip },
-    });
-
-    setTripStatus(TripEvents.DriverConfirmPickup);
   };
 
   const parsedRoute = useMemo(
     () =>
-      requestedTrip?.route?.geometry[0]?.coordinates.map(
-        (coord) => [coord?.longitude, coord?.latitude] as [number, number],
+      requestedTrip?.selectedFare.route.geometry[0].coordinates.map(
+        (coord) => [coord.longitude, coord.latitude] as [number, number],
       ),
     [requestedTrip],
   );
 
   const destination = useMemo(
-    () =>
-      requestedTrip?.route?.geometry[0]?.coordinates[
-        requestedTrip?.route?.geometry[0]?.coordinates?.length - 1
-      ],
+    () => requestedTrip?.selectedFare.route.geometry[0].coordinates[1],
     [requestedTrip],
   );
 
-  const startLocation = useMemo(
-    () => requestedTrip?.route?.geometry[0]?.coordinates[0],
+  const pickup = useMemo(
+    () => requestedTrip?.selectedFare.route.geometry[0].coordinates[0],
     [requestedTrip],
   );
 
@@ -131,20 +93,14 @@ export const DriverMap = ({ packageSlug }: { packageSlug: CarPackageSlug }) => {
               attribution="&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors &copy; <a href='https://carto.com/'>CARTO</a>"
             />
 
-            <Marker key={userID} position={mapPosition} icon={DriverMarker}>
-              <Popup>
-                Driver ID: {userID}
-                <br />
-                Geohash: {driverGeohash}
-              </Popup>
-            </Marker>
+            <Marker position={mapPosition} icon={DriverMarker} />
 
-            {startLocation && (
+            {pickup && (
               <Marker
-                position={[startLocation.latitude, startLocation.longitude]}
+                position={[pickup.latitude, pickup.longitude]}
                 icon={TripPickupMarker}
               >
-                <Popup>Start Location</Popup>
+                <Popup>Pickup</Popup>
               </Marker>
             )}
 
@@ -157,26 +113,20 @@ export const DriverMap = ({ packageSlug }: { packageSlug: CarPackageSlug }) => {
               </Marker>
             )}
 
-            {parsedRoute && <RoutingControl route={parsedRoute} />}
+            {parsedRoute && <Polyline positions={parsedRoute} color="blue" />}
           </MapContainer>
         </div>
       ) : (
         <LoadingMap />
       )}
 
-      <div className="flex flex-col md:w-100 bg-white border-t md:border-t-0 md:border-l">
-        <div className="p-4 border-b">
-          <DriverCard driver={driver} packageSlug={packageSlug} />
-        </div>
-        <div className="flex-1 overflow-y-auto">
-          <DriverTripOverview
-            trip={requestedTrip}
-            status={tripStatus}
-            onAcceptTrip={handleAcceptTrip}
-            onDeclineTrip={handleDeclineTrip}
-            onConfirmPickup={handleConfirmPickup}
-          />
-        </div>
+      <div className="overflow-y-auto md:w-100 bg-white border-t md:border-t-0 md:border-l">
+        <DriverTripOverview
+          trip={requestedTrip}
+          status={tripStatus}
+          handleTripAction={handleTripAction}
+          onReset={resetTripStatus}
+        />
       </div>
     </div>
   );

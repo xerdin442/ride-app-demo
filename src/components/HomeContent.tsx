@@ -82,7 +82,7 @@ export function HomeContent() {
         </div>
       )}
 
-      {userType === "driver" && <DriverMap packageSlug={packageSlug} />}
+      {userType === "driver" && <DriverMap />}
       {userType === "rider" && <RiderMap />}
     </>
   );

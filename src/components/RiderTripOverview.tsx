@@ -1,5 +1,4 @@
 import { CarPackageSelect } from "./CarPackageSelect";
-import { Card } from "./ui/card";
 import { Button } from "./ui/button";
 import { Skeleton } from "./ui/skeleton";
 import { DriverCard } from "./DriverCard";
@@ -203,10 +202,4 @@ export const RiderTripOverview = ({
       />
     );
   }
-
-  return (
-    <Card className="w-full md:max-w-125 z-9999 flex-[0.3]">
-      No trip ride fares, please refresh the page
-    </Card>
-  );
 };
