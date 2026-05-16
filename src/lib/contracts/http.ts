@@ -80,7 +80,6 @@ export interface LoginRequest {
 
 export interface InitiatePaymentRequest {
   email: string;
-  customRedirect: string;
   tripRating: number;
   riderComment?: string;
   driverTip?: number;

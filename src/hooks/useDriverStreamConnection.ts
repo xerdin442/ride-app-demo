@@ -1,58 +1,40 @@
 import { WEBSOCKET_URL } from '@/lib/constants';
-import {
-  TripEvents,
-  BackendEndpoints,
-  ServerWsMessage,
-  isValidWsMessage,
-  isValidTripEvent,
-  ClientWsMessage
-} from '@/lib/contracts';
-import { Coordinate, Trip, Driver } from '@/lib/types';
+import { TripEvents, ServerWsResponse, isValidWsMessage, ClientWsMessage } from '@/lib/contracts/websocket';
+import { Coordinate, Trip } from '@/lib/types';
 import { useCallback, useEffect, useState } from 'react';
 
-interface useDriverConnectionProps {
-  location?: Coordinate;
-  userID: string;
-}
-
-export const useDriverStreamConnection = ({
-  location,
-  userID,
-}: useDriverConnectionProps) => {
+export const useDriverStreamConnection = (userId: string, location?: Coordinate) => {
   const [requestedTrip, setRequestedTrip] = useState<Trip | null>(null)
   const [tripStatus, setTripStatus] = useState<TripEvents | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ws, setWs] = useState<WebSocket | null>(null);
-  const [driver, setDriver] = useState<Driver | null>(null);
 
   const sendMessage = useCallback((message: ClientWsMessage) => {
-    if (ws?.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify(message));
-    } else {
-      setError('WebSocket is not connected');
-    }
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify(message));
   }, [ws]);
 
   useEffect(() => {
     if (!ws || !location) return;
 
-    // Send location updates for drivers without an active trip or trip request
-    if (!requestedTrip) return;
-
     sendMessage({
       type: TripEvents.DriverLocationUpdate,
-      data: { coords: location, }
+      data: {
+        coords: location,
+        riderId: requestedTrip?.userId
+      }
     })
   }, [ws, location, sendMessage, requestedTrip]);
 
   useEffect(() => {
-    if (!userID) return;
+    if (!userId) return;
 
-    const websocket = new WebSocket(`${WEBSOCKET_URL}${BackendEndpoints.WS_DRIVERS}?userID=${userID}`);
-    setWs(websocket);
+    const ws = new WebSocket(`${WEBSOCKET_URL}/ws/drivers?user_id=${userId}`);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setWs(ws);
 
-    websocket.onmessage = (event) => {
-      const message = JSON.parse(event.data) as ServerWsMessage;
+    ws.onmessage = (event) => {
+      const message = JSON.parse(event.data) as ServerWsResponse;
 
       if (!message || !isValidWsMessage(message)) {
         setError(`Unknown message type "${message}", allowed types are: ${Object.values(TripEvents).join(', ')}`);
@@ -66,40 +48,33 @@ export const useDriverStreamConnection = ({
         case TripEvents.TripAborted:
         case TripEvents.TripCancelled:
         case TripEvents.TripCompleted:
-          setRequestedTrip(null)
+        case TripEvents.CashOptionPreferred:
           setTripStatus(message.type)
+          setRequestedTrip(null)
           break;
       }
-
-      if (isValidTripEvent(message.type)) {
-        setTripStatus(message.type);
-      } else {
-        setError(`Unknown message type "${message.type}", allowed types are: ${Object.values(TripEvents).join(', ')}`);
-      }
     };
 
-    websocket.onclose = () => {
-      console.log('WebSocket closed');
+    ws.onclose = (event) => {
+      console.log(`Connection closed: ${event.reason}`);
     };
 
-    websocket.onerror = (event) => {
+    ws.onerror = () => {
       setError('WebSocket error occurred');
-      console.error('WebSocket error:', event);
     };
 
     return () => {
       console.log('Closing WebSocket...');
-      if (websocket.readyState === WebSocket.OPEN) {
-        websocket.close();
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.close();
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userID]);
+  }, [userId]);
 
   const resetTripStatus = () => {
     setTripStatus(null);
     setRequestedTrip(null);
   }
 
-  return { error, tripStatus, driver, requestedTrip, resetTripStatus, sendMessage, setTripStatus };
+  return { error, tripStatus, requestedTrip, resetTripStatus, sendMessage, setTripStatus };
 }

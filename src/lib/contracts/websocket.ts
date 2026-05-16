@@ -76,7 +76,11 @@ interface TripUpdateResponse {
 }
 
 interface PaymentEventResponse {
-  type: TripEvents.PaymentRequired | TripEvents.PaymentSuccess | TripEvents.PaymentFailed;
+  type:
+  | TripEvents.PaymentRequired
+  | TripEvents.CashOptionPreferred
+  | TripEvents.PaymentSuccess
+  | TripEvents.PaymentFailed;
 }
 
 interface TripRatingRequiredResponse {
@@ -119,10 +123,6 @@ interface TripRatingRequest {
   }
 }
 
-export function isValidTripEvent(event: string): event is TripEvents {
-  return Object.values(TripEvents).includes(event as TripEvents);
-}
-
 export function isValidWsMessage(message: ServerWsResponse): message is ServerWsResponse {
-  return isValidTripEvent(message.type);
+  return Object.values(TripEvents).includes(message.type);
 }

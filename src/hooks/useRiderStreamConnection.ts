@@ -51,13 +51,12 @@ export function useRiderStreamConnection(userId: string) {
       }
     };
 
-    ws.onclose = () => {
-      console.log('WebSocket closed');
+    ws.onclose = (event) => {
+      console.log(`Connection closed: ${event.reason}`);
     };
 
-    ws.onerror = (event) => {
+    ws.onerror = () => {
       setError('WebSocket error occurred');
-      console.error('WebSocket error:', event);
     };
 
     return () => {

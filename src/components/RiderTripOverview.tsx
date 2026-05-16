@@ -49,6 +49,32 @@ export const RiderTripOverview = ({
     );
   }
 
+  if (status === TripEvents.PaymentSuccess) {
+    return (
+      <TripOverviewCard
+        title="Trip completed!"
+        description="Your trip has ended. Thank you for choosing Wayfare!"
+      >
+        <Button variant="outline" className="w-full" onClick={onReset}>
+          Go back
+        </Button>
+      </TripOverviewCard>
+    );
+  }
+
+  if (status === TripEvents.PaymentFailed) {
+    return (
+      <TripOverviewCard
+        title="Payment failed!"
+        description="Your payment failed, please try another method"
+      >
+        <Button className="w-full mt-2.5" onClick={handleCashPayment}>
+          Pay with cash
+        </Button>
+      </TripOverviewCard>
+    );
+  }
+
   if (
     status === TripEvents.AwaitingWebhookStatus ||
     status === TripEvents.CashOptionPreferred
@@ -133,19 +159,6 @@ export const RiderTripOverview = ({
   }
 
   if (status === TripEvents.TripStarted) {
-  }
-
-  if (status === TripEvents.TripCancelled) {
-    return (
-      <TripOverviewCard
-        title="Trip cancelled!"
-        description="Your trip has been cancelled, please try again later"
-      >
-        <Button variant="outline" className="w-full" onClick={onReset}>
-          Go back
-        </Button>
-      </TripOverviewCard>
-    );
   }
 
   if (amount && !assignedDriver) {

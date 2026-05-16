@@ -32,7 +32,6 @@ import LoadingMap from "./LoadingMap";
 import { MapClickHandler } from "./MapClickHandler";
 import { RiderTripOverview } from "./RiderTripOverview";
 import TripRatingModal from "./TripRatingModal";
-import { SITE_URL } from "@/lib/constants";
 
 export default function RiderMap({ user }: { user: Rider }) {
   const [tripPreview, setTripPreview] = useState<TripPreview | null>(null);
@@ -143,7 +142,7 @@ export default function RiderMap({ user }: { user: Rider }) {
       data: { trip: requestedTrip },
     });
 
-    setTripStatus(TripEvents.TripCancelled);
+    resetTripPreview();
   };
 
   const handleCheckout = async (
@@ -155,7 +154,6 @@ export default function RiderMap({ user }: { user: Rider }) {
 
     const payload: InitiatePaymentRequest = {
       email: user.email,
-      customRedirect: `${SITE_URL}?checkout_redirect=true`,
       tripRating: rating,
       riderComment: comment,
       driverTip: tip,
@@ -261,7 +259,7 @@ export default function RiderMap({ user }: { user: Rider }) {
         <TripRatingModal
           data={tripRatingData}
           confirmSubmit={sendMessage}
-          onClose={resetTripPreview}
+          onClose={resetTripStatus}
         />
       )}
     </>
