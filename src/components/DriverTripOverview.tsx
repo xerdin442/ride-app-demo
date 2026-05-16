@@ -58,7 +58,7 @@ export const DriverTripOverview = ({
     return (
       <TripOverviewCard
         title="Trip completed!"
-        description="The trip has been completed"
+        description="The trip has been ended"
       >
         <Button onClick={onReset}>Go back</Button>
       </TripOverviewCard>

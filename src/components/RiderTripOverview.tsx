@@ -78,6 +78,12 @@ export const RiderTripOverview = ({
     status === TripEvents.AwaitingWebhookStatus ||
     status === TripEvents.CashOptionPreferred
   ) {
+    return (
+      <TripOverviewCard
+        title="Processing..."
+        description="Please wait while we confirm your payment"
+      ></TripOverviewCard>
+    );
   }
 
   if (status === TripEvents.PaymentRequired) {
@@ -155,9 +161,21 @@ export const RiderTripOverview = ({
   }
 
   if (status === TripEvents.DriverArrival) {
+    return (
+      <TripOverviewCard
+        title="Driver Arrived"
+        description="Your driver has arrived at the pickup location"
+      ></TripOverviewCard>
+    );
   }
 
   if (status === TripEvents.TripStarted) {
+    return (
+      <TripOverviewCard
+        title="Trip Started"
+        description="Your trip has started, please enjoy your ride"
+      ></TripOverviewCard>
+    );
   }
 
   if (amount && !assignedDriver) {
