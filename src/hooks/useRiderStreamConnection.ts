@@ -33,7 +33,7 @@ export function useRiderStreamConnection(userId: string) {
         case TripEvents.PaymentRequired:
         case TripEvents.DriverArrival:
         case TripEvents.NoDriversFound:
-        case TripEvents.TripCompleted:
+        case TripEvents.TripStarted:
           setTripStatus(message.type);
           break;
         case TripEvents.DriverAssigned:

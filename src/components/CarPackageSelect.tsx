@@ -8,37 +8,36 @@ import {
 import { Button } from "./ui/button";
 import { CarPackageDetails } from "./CarPackageDetails";
 
-interface DriverListProps {
-  trip: TripPreview | null;
+interface CarPackageSelectProps {
+  trip: TripPreview;
   onPackageSelect: (fare: RideFare) => void;
+  setAmount: (amount: number) => void;
   onCancel: () => void;
 }
 
-export function DriverList({
+export function CarPackageSelect({
   trip,
   onPackageSelect,
+  setAmount,
   onCancel,
-}: DriverListProps) {
+}: CarPackageSelectProps) {
   return (
     <div className="flex items-center justify-center p-4 min-h-screen bg-black/20">
       <div className="bg-white rounded-2xl shadow-lg p-6 max-w-md w-full">
         <h2 className="text-xl font-semibold mb-2">Select your desired ride</h2>
         <p className="text-sm text-gray-500 mb-6">
-          Routing for {convertMetersToKilometers(trip?.distance ?? 0)}
+          Routing for {convertMetersToKilometers(trip.distance)}
         </p>
         <div className="flex items-center gap-1 text-sm text-gray-500 mb-2">
           <Clock className="w-4 h-4" />
           <span>
-            You&apos;ll arrive in:{" "}
-            {convertSecondsToMinutes(trip?.duration ?? 0)}
+            You&apos;ll arrive in {convertSecondsToMinutes(trip.duration)}
           </span>
         </div>
         <div className="space-y-4">
-          {trip?.rideFares.map((fare) => {
+          {trip.rideFares.map((fare) => {
             const Icon = CarPackageDetails[fare.packageSlug].icon;
-            const price =
-              fare.totalPriceInCents &&
-              `$${(fare.totalPriceInCents / 100).toFixed(2)}`;
+            const price = fare.amount && `₦${(fare.amount / 100).toFixed(2)}`;
 
             return (
               <div
@@ -47,7 +46,10 @@ export function DriverList({
                   "flex items-center justify-between p-4 rounded-lg border transition-all cursor-pointer",
                   "hover:border-primary hover:bg-primary/5",
                 )}
-                onClick={() => onPackageSelect(fare)}
+                onClick={() => {
+                  onPackageSelect(fare);
+                  setAmount(fare.amount);
+                }}
               >
                 <div className="flex items-center gap-4">
                   <div className="p-2 bg-gray-100 rounded-lg">{Icon}</div>

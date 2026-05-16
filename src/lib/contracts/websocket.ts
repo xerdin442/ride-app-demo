@@ -7,6 +7,7 @@ export enum TripEvents {
   TripCancelled = "trip.cmd.cancelled",
   TripCompleted = "trip.cmd.completed",
   TripAborted = "trip.cmd.aborted",
+  TripStarted = "trip.cmd.started",
   TripRated = "trip.cmd.rated",
   TripRatingRequired = "trip.event.rating_required",
   DriverTripRequest = "driver.event.trip_request",
@@ -14,8 +15,10 @@ export enum TripEvents {
   DriverConfirmPickup = "driver.cmd.confirm_pickup",
   DriverTripAccept = "driver.cmd.trip_accept",
   DriverTripDecline = "driver.cmd.trip_decline",
+  DriverStartTrip = "driver.cmd.start_trip",
   DriverEndTrip = "driver.cmd.end_trip",
   PaymentRequired = "trip.event.payment_required",
+  AwaitingWebhookStatus = "payment.event.awaiting_webhook_status",
   PaymentSuccess = "payment.event.success",
   PaymentFailed = "payment.event.failed",
   CashPaymentReceived = "payment.event.cash_payment_received",
@@ -28,14 +31,14 @@ export type ServerWsResponse =
   | DriverArrivalResponse
   | DriverTripAvailableResponse
   | NoDriversFoundResponse
-  | TripEndedResponse
+  | TripUpdateResponse
   | PaymentEventResponse
   | TripRatingRequiredResponse;
 
 export type ClientWsMessage =
   | DriverTripActionRequest
   | DriverLocationUpdateRequest
-  | RiderTripUpdateRequest
+  | RiderTripActionRequest
   | TripRatingRequest;
 
 interface NoDriversFoundResponse {
@@ -64,8 +67,12 @@ interface DriverArrivalResponse {
   type: TripEvents.DriverArrival
 }
 
-interface TripEndedResponse {
-  type: TripEvents.TripCancelled | TripEvents.TripCompleted | TripEvents.TripAborted
+interface TripUpdateResponse {
+  type:
+  | TripEvents.TripCancelled
+  | TripEvents.TripCompleted
+  | TripEvents.TripAborted
+  | TripEvents.TripStarted
 }
 
 interface PaymentEventResponse {
@@ -98,7 +105,7 @@ interface DriverLocationUpdateRequest {
   }
 }
 
-interface RiderTripUpdateRequest {
+interface RiderTripActionRequest {
   type: TripEvents.TripCancelled | TripEvents.CashOptionPreferred;
   data: { trip: Trip; }
 }

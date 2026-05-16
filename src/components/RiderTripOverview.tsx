@@ -1,4 +1,4 @@
-import { DriverList } from "./DriversList";
+import { CarPackageSelect } from "./CarPackageSelect";
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
 import { Skeleton } from "./ui/skeleton";
@@ -10,14 +10,17 @@ import {
   convertMetersToKilometers,
 } from "@/lib/utils";
 import { TripOverviewCard } from "./TripOverviewCard";
+import { useState } from "react";
+import CheckoutDetails from "./CheckoutDetails";
 
 interface RiderTripOverviewProps {
   trip: TripPreview | null;
   status: TripEvents | null;
   assignedDriver?: Driver | null;
-  onPackageSelect: (carPackage: RideFare) => void;
-  onCashPayment: () => void;
-  onCancelTrip: () => void;
+  handleStartTrip: (fare: RideFare) => void;
+  handleCheckout: (rating: number, comment?: string, tip?: number) => void;
+  handleCashPayment: () => void;
+  handleCancelTrip: () => void;
   onReset: () => void;
 }
 
@@ -25,11 +28,19 @@ export const RiderTripOverview = ({
   trip,
   status,
   assignedDriver,
-  onPackageSelect,
-  onCancelTrip,
+  handleStartTrip,
+  handleCheckout,
+  handleCancelTrip,
+  handleCashPayment,
   onReset,
 }: RiderTripOverviewProps) => {
-  if (!trip || !trip.tripID) {
+  const [amount, setAmount] = useState<number>();
+  const [rating, setRating] = useState<number>(0);
+  const [comment, setComment] = useState<string>();
+  const [driverTip, setDriverTip] = useState<number>();
+  const [checkoutPreferred, setCheckoutPreferred] = useState<boolean>(false);
+
+  if (!trip) {
     return (
       <TripOverviewCard
         title="Start a trip"
@@ -38,23 +49,50 @@ export const RiderTripOverview = ({
     );
   }
 
-  if (status === TripEvents.PaymentSessionCreated && paymentSession) {
+  if (
+    status === TripEvents.AwaitingWebhookStatus ||
+    status === TripEvents.CashOptionPreferred
+  ) {
+  }
+
+  if (status === TripEvents.PaymentRequired) {
     return (
       <TripOverviewCard
         title="Payment Required"
-        description="Please complete the payment to confirm your trip"
+        description="Rate your experience and select a payment method to complete your trip"
       >
         <div className="flex flex-col gap-4">
-          <DriverCard driver={assignedDriver} />
+          {checkoutPreferred && (
+            <CheckoutDetails
+              setRating={setRating}
+              setComment={setComment}
+              setDriverTip={setDriverTip}
+            />
+          )}
 
           <div className="text-sm text-gray-500">
-            <p>
-              Amount: {paymentSession.amount} {paymentSession.currency}
-            </p>
-            <p>Trip ID: {paymentSession.tripID}</p>
+            <p>Amount to pay: {amount}</p>
           </div>
 
-          <Button className="w-full">Payment Button</Button>
+          <Button
+            className="w-full"
+            disabled={checkoutPreferred && rating === 0}
+            onClick={
+              checkoutPreferred
+                ? () => handleCheckout(rating, comment, driverTip)
+                : () => setCheckoutPreferred(true)
+            }
+          >
+            {checkoutPreferred ? "Go to checkout" : "Pay online"}
+          </Button>
+
+          <Button
+            className="w-full mt-2.5"
+            disabled={checkoutPreferred}
+            onClick={handleCashPayment}
+          >
+            Pay with cash
+          </Button>
         </div>
       </TripOverviewCard>
     );
@@ -63,8 +101,8 @@ export const RiderTripOverview = ({
   if (status === TripEvents.NoDriversFound) {
     return (
       <TripOverviewCard
-        title="No drivers found"
-        description="No drivers found for your trip, please try again later"
+        title="No Drivers Found"
+        description="There are no drivers available right now. Please try again later"
       >
         <Button variant="outline" className="w-full" onClick={onReset}>
           Go back
@@ -76,39 +114,32 @@ export const RiderTripOverview = ({
   if (status === TripEvents.DriverAssigned) {
     return (
       <TripOverviewCard
-        title="Driver assigned!"
-        description="Your driver is on the way, waiting for payment confirmation to show..."
+        title="Driver Found!"
+        description="Your driver is on the way, please wait for them to arrive."
       >
-        <div className="flex flex-col space-y-3 justify-center items-center mb-4">
-          {/* <p>Driver: {trip.id}</p> */}
-        </div>
-        <Button variant="destructive" className="w-full" onClick={onCancelTrip}>
-          Cancel current trip
+        <DriverCard driver={assignedDriver} />
+        <Button
+          variant="destructive"
+          className="w-full mt-2.5"
+          onClick={handleCancelTrip}
+        >
+          Cancel trip
         </Button>
       </TripOverviewCard>
     );
   }
 
-  // driver arrival (complete trip button)
+  if (status === TripEvents.DriverArrival) {
+  }
 
-  if (status === TripEvents.TripCompleted) {
-    return (
-      <TripOverviewCard
-        title="Trip completed!"
-        description="Your trip is completed, thank you for using Wayfare!"
-      >
-        <Button variant="outline" className="w-full" onClick={onReset}>
-          Go back
-        </Button>
-      </TripOverviewCard>
-    );
+  if (status === TripEvents.TripStarted) {
   }
 
   if (status === TripEvents.TripCancelled) {
     return (
       <TripOverviewCard
         title="Trip cancelled!"
-        description="Your trip is cancelled, please try again later"
+        description="Your trip has been cancelled, please try again later"
       >
         <Button variant="outline" className="w-full" onClick={onReset}>
           Go back
@@ -117,11 +148,11 @@ export const RiderTripOverview = ({
     );
   }
 
-  if (!assignedDriver) {
+  if (amount && !assignedDriver) {
     return (
       <TripOverviewCard
-        title="Looking for a driver"
-        description="Your trip is confirmed! We're matching you with a driver, it should not take long."
+        title="Searching..."
+        description="We're connecting you with a driver, hang tight..."
       >
         <div className="flex flex-col space-y-3 justify-center items-center mb-4">
           <Skeleton className="h-31.25 w-62.5 rounded-xl" />
@@ -132,17 +163,15 @@ export const RiderTripOverview = ({
         </div>
 
         <div className="flex flex-col items-center justify-center gap-2">
-          {trip?.duration && (
-            <h3 className="text-sm font-medium text-gray-700 mb-2">
-              Arriving in: {convertSecondsToMinutes(trip?.duration)} at your
-              destination ({convertMetersToKilometers(trip?.distance ?? 0)})
-            </h3>
-          )}
+          <h3 className="text-sm font-medium text-gray-700 mb-2">
+            Arriving in {convertSecondsToMinutes(trip.duration)} at your
+            destination ({convertMetersToKilometers(trip.distance)})
+          </h3>
 
           <Button
             variant="destructive"
             className="w-full"
-            onClick={onCancelTrip}
+            onClick={handleCancelTrip}
           >
             Cancel
           </Button>
@@ -151,11 +180,12 @@ export const RiderTripOverview = ({
     );
   }
 
-  if (trip.rideFares && trip.rideFares.length >= 0 && !trip.tripID) {
+  if (!amount && trip.rideFares.length > 0) {
     return (
-      <DriverList
+      <CarPackageSelect
         trip={trip}
-        onPackageSelect={onPackageSelect}
+        onPackageSelect={handleStartTrip}
+        setAmount={setAmount}
         onCancel={onReset}
       />
     );

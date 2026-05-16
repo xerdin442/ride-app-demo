@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import L from "leaflet";
 import { useRef, useState } from "react";
 import {
@@ -16,9 +15,11 @@ import {
   StartTripRequest,
   StartTripResponse,
   sendRequest,
+  InitiatePaymentRequest,
+  InitiatePaymentResponse,
 } from "@/lib/contracts/http";
 import { TripEvents } from "@/lib/contracts/websocket";
-import { TripPreview, RideFare } from "@/lib/types";
+import { TripPreview, RideFare, Rider } from "@/lib/types";
 import {
   TripDestinationMarker,
   TripPickupMarker,
@@ -26,11 +27,14 @@ import {
 } from "@/lib/utils";
 import { useLocationTracker } from "@/hooks/useLocationTracker";
 import { useRiderStreamConnection } from "@/hooks/useRiderStreamConnection";
+import { DriverCard } from "./DriverCard";
 import LoadingMap from "./LoadingMap";
 import { MapClickHandler } from "./MapClickHandler";
 import { RiderTripOverview } from "./RiderTripOverview";
+import TripRatingModal from "./TripRatingModal";
+import { SITE_URL } from "@/lib/constants";
 
-export default function RiderMap({ userId }: { userId: string }) {
+export default function RiderMap({ user }: { user: Rider }) {
   const [tripPreview, setTripPreview] = useState<TripPreview | null>(null);
   const [destination, setDestination] = useState<[number, number] | null>(null);
   const mapRef = useRef<L.Map>(null);
@@ -47,11 +51,10 @@ export default function RiderMap({ userId }: { userId: string }) {
     setTripStatus,
     resetTripStatus,
     sendMessage,
-  } = useRiderStreamConnection(userId);
+  } = useRiderStreamConnection(user.id);
 
   const handleMapClick = async (e: L.LeafletMouseEvent) => {
-    if (tripPreview?.tripId) return;
-
+    if (tripPreview) return;
     if (!location) return;
 
     if (debounceTimeoutRef.current) {
@@ -74,7 +77,6 @@ export default function RiderMap({ userId }: { userId: string }) {
       );
 
       setTripPreview({
-        tripId: "",
         route: parsedRoute,
         rideFares: data.rideFares,
         distance: route.distance,
@@ -130,16 +132,6 @@ export default function RiderMap({ userId }: { userId: string }) {
       return;
     }
 
-    if (tripPreview) {
-      setTripPreview(
-        (prev) =>
-          ({
-            ...prev,
-            tripId: result.data?.tripId,
-          }) as TripPreview,
-      );
-    }
-
     return;
   };
 
@@ -152,6 +144,35 @@ export default function RiderMap({ userId }: { userId: string }) {
     });
 
     setTripStatus(TripEvents.TripCancelled);
+  };
+
+  const handleCheckout = async (
+    rating: number,
+    comment?: string,
+    tip?: number,
+  ) => {
+    if (!requestedTrip) return;
+
+    const payload: InitiatePaymentRequest = {
+      email: user.email,
+      customRedirect: `${SITE_URL}?checkout_redirect=true`,
+      tripRating: rating,
+      riderComment: comment,
+      driverTip: tip,
+    };
+
+    const { result } = await sendRequest<
+      InitiatePaymentRequest,
+      InitiatePaymentResponse
+    >(`/trip/${requestedTrip.id}/pay`, "POST", true, payload);
+
+    if (!result.data) {
+      // handle error display
+      return;
+    }
+
+    window.open(result.data.checkoutUrl, "_blank", "noopener,noreferrer");
+    setTripStatus(TripEvents.AwaitingWebhookStatus);
   };
 
   const handleCashPayment = () => {
@@ -176,73 +197,73 @@ export default function RiderMap({ userId }: { userId: string }) {
   }
 
   return (
-    <div className="relative flex flex-col md:flex-row h-screen">
-      {mapPosition ? (
-        <div className={`${destination ? "flex-[0.7]" : "flex-1"}`}>
-          <MapContainer
-            center={mapPosition}
-            zoom={13}
-            style={{ height: "100%", width: "100%" }}
-            ref={mapRef}
-          >
-            <TileLayer
-              url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-              attribution="&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors &copy; <a href='https://carto.com/'>CARTO</a>"
-            />
+    <>
+      <div className="relative flex flex-col md:flex-row h-screen">
+        {mapPosition ? (
+          <div className={`${destination ? "flex-[0.7]" : "flex-1"}`}>
+            <MapContainer
+              center={mapPosition}
+              zoom={13}
+              style={{ height: "100%", width: "100%" }}
+              ref={mapRef}
+            >
+              <TileLayer
+                url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+                attribution="&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors &copy; <a href='https://carto.com/'>CARTO</a>"
+              />
 
-            <Marker position={mapPosition} icon={TripPickupMarker} />
+              <Marker position={mapPosition} icon={TripPickupMarker} />
 
-            {assignedDriver && driverLocation && (
-              <Marker
-                key={assignedDriver.id}
-                position={[driverLocation.latitude, driverLocation.longitude]}
-                icon={DriverMarker}
-              >
-                <Popup>
-                  Driver ID: {assignedDriver.id}
-                  <br />
-                  Name: {assignedDriver.name}
-                  <br />
-                  Car Plate: {assignedDriver.carPlate}
-                  <br />
-                  <Image
-                    src={assignedDriver.profilePicture}
-                    alt="Driver profile picture"
-                    width={100}
-                    height={100}
-                  />
-                </Popup>
-              </Marker>
-            )}
+              {assignedDriver && driverLocation && (
+                <Marker
+                  key={assignedDriver.id}
+                  position={[driverLocation.latitude, driverLocation.longitude]}
+                  icon={DriverMarker}
+                >
+                  <Popup>
+                    <DriverCard driver={assignedDriver} />
+                  </Popup>
+                </Marker>
+              )}
 
-            {destination && (
-              <Marker position={destination} icon={TripDestinationMarker}>
-                <Popup>Destination</Popup>
-              </Marker>
-            )}
+              {destination && (
+                <Marker position={destination} icon={TripDestinationMarker}>
+                  <Popup>Destination</Popup>
+                </Marker>
+              )}
 
-            {tripPreview && (
-              <Polyline positions={tripPreview.route} color="blue" />
-            )}
+              {tripPreview && (
+                <Polyline positions={tripPreview.route} color="blue" />
+              )}
 
-            <MapClickHandler onClick={handleMapClick} />
-          </MapContainer>
+              <MapClickHandler onClick={handleMapClick} />
+            </MapContainer>
+          </div>
+        ) : (
+          <LoadingMap />
+        )}
+
+        <div className="flex-[0.4]">
+          <RiderTripOverview
+            trip={tripPreview}
+            assignedDriver={assignedDriver}
+            status={tripStatus}
+            handleStartTrip={handleStartTrip}
+            handleCheckout={handleCheckout}
+            handleCashPayment={handleCashPayment}
+            handleCancelTrip={handleCancelTrip}
+            onReset={resetTripPreview}
+          />
         </div>
-      ) : (
-        <LoadingMap />
-      )}
-
-      <div className="flex-[0.4]">
-        <RiderTripOverview
-          trip={tripPreview}
-          assignedDriver={assignedDriver}
-          status={tripStatus}
-          onPackageSelect={handleStartTrip}
-          onCashPayment={handleCashPayment}
-          onCancelTrip={handleCancelTrip}
-          onReset={resetTripPreview}
-        />
       </div>
-    </div>
+
+      {tripStatus === TripEvents.TripRatingRequired && tripRatingData && (
+        <TripRatingModal
+          data={tripRatingData}
+          confirmSubmit={sendMessage}
+          onClose={resetTripPreview}
+        />
+      )}
+    </>
   );
 }
