@@ -50,7 +50,11 @@ export interface TripPreview {
 export interface Driver {
 	id: string;
 	name: string;
+	email: string;
+	phone: string;
 	profilePicture: string;
+	carModel: string;
+	carColor: string;
 	carPlate: string;
 	packageSlug: CarPackageSlug;
 	currentRating: number;
@@ -62,6 +66,7 @@ export interface Rider {
 	id: string;
 	name: string;
 	email: string;
+	phone: string;
 	profilePicture: string;
 }
 

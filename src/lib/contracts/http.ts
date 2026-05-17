@@ -58,11 +58,14 @@ export interface SignupDetails {
   email: string;
   password: string;
   name: string;
+  phone: string;
 }
 
 export interface SignupDriverRequest extends SignupDetails {
   profileImage: File;
-  carPackage: string;
+  verificationPhotos: File[];
+  carModel: string;
+  carColor: string;
   carPlate: string;
   accountNumber: string;
   accountName: string;
